@@ -7,7 +7,7 @@ User interface redesigned by Manuel Ángel.
 
 controlProcess.py: Control of lighting and motor movement.
 
-Latest version: 20230430.
+Latest version: 20231130.
 """
 
 from time import sleep
@@ -46,7 +46,8 @@ on = 1
 off = 0
 
 # Connection with the pigpio daemon.
-pi = pigpio.pi('localhost', 8889)
+# pi = pigpio.pi('localhost', 8889)
+pi = pigpio.pi('127.0.0.1', 8889)
 
 # We configure pins as output.
 pi.set_mode(lightPin, pigpio.OUTPUT)

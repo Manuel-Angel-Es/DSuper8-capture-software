@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 """
-DSuper8 project based on Joe Herman's rpi-film-capture.
+per8 project based on Joe Herman's rpi-film-capture.
 
 Software modified by Manuel Ángel.
 
@@ -9,7 +9,7 @@ User interface redesigned by Manuel Ángel.
 
 DS8Servidor.py: Server software main program.
 
-Latest version: 20230430.
+Latest version: 20231130.
 """
 
 from socket import (socket, AF_INET, SOCK_STREAM, SHUT_RDWR, SOL_SOCKET,
@@ -33,7 +33,6 @@ from sys import stdout, exit
 from logging import INFO, basicConfig, info
 
 # Our own modules.
-
 from controlProcess import DS8Control, MotorDriver
 
 from camera import DS8Camera
@@ -48,11 +47,7 @@ class DS8Server():
     def __init__(self):
 
         # Counter of images taken by the camera.
-        self.imgcount = 0
-
-        # Works with other formats but large sizes make it very slow.
-        # PNG image format has been tested. It turns out very slow.
-        self.imgFormat = "jpeg"
+        self.imgcount = 0       
 
         # Compression quality parameter for preview.
         self.jpegQualityPr = 60
@@ -61,10 +56,7 @@ class DS8Server():
         self.jpegQualityCap = 97
 
         # Compression quality parameter for automatic exposure calculation.
-        self.jpegQualityAE = 30
-        
-        # Base exposure time for automatic exposure calculation.
-        self.baseExpTime = 500
+        self.jpegQualityAE = 30        
 
         # This variable determines if we advance after each photo.
         # It is activated and deactivated by commands from the client.
@@ -120,19 +112,9 @@ class DS8Server():
 
         # Connection command reading thread.
         self.ctrlReader = StreamReader(config.ctrlConn, self.mainExitEvent)
-
-        # Thread pool lock for sending images.
-        self.poolLock = Lock()
-
-        # We use separate threads for sending captured images.
-        # 5 threads are attempted for extreme multi-image support.
-        config.pool = [ImageStreamer(self.connectionLock, self.poolLock,
-                                   self.mainExitEvent)
-                       for i in range(5)]
-
-        # We assign names to the threads.
-        for i in range(5):
-            config.pool[i].name = "Thread-{:02d}".format(i+1)
+       
+        # Thread for sending images.
+        self.imgSendThread = ImageStreamer(self.connectionLock, self.mainExitEvent)
 
     # Make connections with the client program.
     def setupConns(self, imgSocket, ctrlSocket):
@@ -160,15 +142,18 @@ class DS8Server():
 
         # Initial settings.
 
-        # zoomDial
-        elif cmd == setZ:
-            self.cam.setZ(int(setting))
+        # zoomDial            
+        elif cmd == imageWidth:
+            self.cam.width = int(setting)
+            
+        elif cmd == imageHeight:
+            self.cam.height = int(setting)
 
-        # roiUpButton - roiDownButton
+        # zoomdial, roiUpButton, roiDownButton
         elif cmd == setY:
             self.cam.setY(int(setting))
 
-        # roiLeftButton - roiRightButton
+        # zoomdial, roiLeftButton, roiRightButton
         elif cmd == setX:
             self.cam.setX(int(setting))
 
@@ -275,13 +260,14 @@ class DS8Server():
         # autoExpCheckBox
         elif cmd == autoexpOn:            
             self.cam.autoExp = True
-            # Se activa exposición automática.
+            # Automatic exposure is activated.
             self.cam.picam2.controls.AeEnable = True
 
         elif cmd == autoexpOff:
             self.cam.autoExp = False
-            # Se desactiva exposición automática.
+            # Automatic exposure is disabled.
             self.cam.picam2.controls.AeEnable = False
+            self.cam.picam2.controls.AnalogueGain = 1
 
         # timeExpBox
         elif cmd == fixExposure:
@@ -355,6 +341,20 @@ class DS8Server():
             self.cam.picam2.configure("still")
             self.cam.picam2.start()
 
+        # jpgCheckBox
+        elif cmd == jpgOn:
+            self.cam.captureJpg = True
+        
+        elif cmd == jpgOff:
+            self.cam.captureJpg = False
+
+        # rawCheckBox
+        elif cmd == rawOn:            
+            self.cam.captureRaw = True            
+          
+        elif cmd == rawOff:
+            self.cam.captureRaw = False
+
         # constraintModeBox
         elif cmd == constraintMode:
             self.cam.setConstraintMode(int(setting))
@@ -383,18 +383,16 @@ class DS8Server():
     def newImage(self):       
 
         if self.cam.mode == self.cam.previewing:
-                
-            # Manual exposure time is used.
-            # The autoexposure setting varies the analog gain of the camera
-            # based on this exposure time.
-            self.cam.picam2.controls.ExposureTime = self.cam.ManExposureTime
+            
+            if not self.cam.autoExp:            
+                self.cam.picam2.controls.ExposureTime = self.cam.ManExposureTime
             
             imgflag = "p"
             self.takeAndQueuePhoto(imgflag)
             
             if self.cam.autoExp:
                 # Automatic exposure data is sent.
-                self.sendSS("e")
+                self.sendSS("e")            
 
             info("Taken preview image. " + self.exposureInfo())
 
@@ -417,58 +415,52 @@ class DS8Server():
             while self.capEvent.is_set():
                 sleep(0.1)
 
-            for shot in range(1, self.cam.bracketing + 1):
+            if self.cam.captureRaw:
+                if not self.cam.autoExp:
+                    # Se envían datos de exposición.
+                    self.sendSS("f")
+                
+                imgflag = "d"
+                self.takeAndQueueDng(imgflag)
+                info("Raw dng image taken. " + self.exposureInfo())
 
-                bracketExposure = self.bracketSS(self.cam.stops, shot,
-                                                 self.cam.bracketing,
-                                                 self.cam.exposureTime)
+                # This additional image is taken to be displayed in the
+                # client's image window.
+                if not self.cam.captureJpg:
+                    imgflag = "D"
+                    self.takeAndQueuePhoto(imgflag)                               
 
-                self.cam.picam2.controls.ExposureTime = bracketExposure
+            if self.cam.captureJpg:                
 
-                # This loop has the function of ensuring that the camera uses
-                # the new exposure time.
+                for shot in range(1, self.cam.bracketing + 1):
 
-                numOfRetries = 0
+                    bracketExposure = self.bracketSS(self.cam.stops, shot,
+                                                    self.cam.bracketing,
+                                                    self.cam.exposureTime)
 
-                for i in range(config.numOfRetries):
-                    numOfRetries += 1
-                    metadataExposureTime = self.cam.captureMetadata().ExposureTime
-                    dif = abs(bracketExposure - metadataExposureTime)
-                    # info("Theoretical exposure time = " +
-                    #       str(bracketExposure) + " us\n" + " "*29 +
-                    #       "Camera real time = " +
-                    #       str(metadataExposureTime) + " us\n" + " "*29 +
-                    #       "Difference = " + str(dif) + " us")
-                    if  dif <= config.timeExpTolerance:
-                        break
+                    self.cam.picam2.controls.ExposureTime = bracketExposure
 
-                # info("Number of retries = " + str(numOfRetries))
+                    # The new exposure time is stabilized.
+                    self.stabExpTime(bracketExposure)                    
 
-                # Exposure data is sent.
-                self.sendSS("f")
+                    # Exposure data is sent.
+                    self.sendSS("f")                    
 
-                # If we don't have free threads for the next photo (maybe
-                # due to network congestion or busy client)
-                # wait until a thread is available.
-                # This should be rare, but it can happen.
-                while not len(config.pool):
-                    sleep(1)
+                    imgflag = ("s" if self.cam.bracketing == 1 else "a"
+                                if shot < self.cam.bracketing else "b")
 
-                imgflag = ("s" if self.cam.bracketing == 1 else "a"
-                           if shot < self.cam.bracketing else "b")
+                    self.takeAndQueuePhoto(imgflag)
 
-                self.takeAndQueuePhoto(imgflag)
+                    if imgflag == "s":
+                        info("Single image taken. " + self.exposureInfo())
 
-                if imgflag == "s":
-                    info("Single image taken. " + self.exposureInfo())
+                    elif imgflag == "a":
+                        info("Bracketing image taken. " + self.exposureInfo())
 
-                elif imgflag == "a":
-                    info("Bracketing image taken. " + self.exposureInfo())
-
-                elif imgflag == "b":
-                    info("Last bracketing image taken. "
-                         + self.exposureInfo())
-
+                    elif imgflag == "b":
+                        info("Last bracketing image taken. "
+                              + self.exposureInfo())            
+           
             if self.autoAdvance:
 
                 # Sending the signal to advance one frame.
@@ -476,6 +468,33 @@ class DS8Server():
 
         self.imgcount += 1
         info("Sent image " + str(self.imgcount))
+
+    # Take and send a dng file.
+    def takeAndQueueDng(self, imgflag):        
+        
+        # The new exposure time is stabilized.
+        if not self.cam.autoExp:
+            self.stabExpTime(self.cam.exposureTime)
+        
+        # Raw image is captured.
+        request = self.cam.picam2.capture_request()
+        
+        request.save_dng("file.dng")       
+        
+        request.release()
+        
+        # Sending flag.
+        self.imgSendThread.imgflag = imgflag.encode()
+        
+        # Sending dng file.
+        with open("file.dng", "rb") as dngFile:
+            self.imgSendThread.stream.write(dngFile.read())
+        
+        # Sending the exposure time.
+        self.imgSendThread.exposureTime = self.cam.captureMetadata().ExposureTime
+        
+        # Thread start.
+        self.imgSendThread.event.set()        
 
     # Take and send a image.
     def takeAndQueuePhoto(self, imgflag):
@@ -487,97 +506,63 @@ class DS8Server():
             jpegQuality = self.jpegQualityPr
 
         self.cam.picam2.options["quality"] = jpegQuality
-
-        processor = None
-        while not processor:
-            with self.poolLock:
-                if len(config.pool):
-                    processor = config.pool.pop()
-                    # info("Reserved " + processor.name)
-            if processor:
-                # Thread is available.
-                processor.imgflag = imgflag.encode()
-
-                # In preview or capture mode we use jpg format.
-                self.cam.picam2.capture_file(processor.stream, format="jpeg")
-
-                # Sending blue and red gains.
-                if self.cam.awb:
-                    self.sendGains()
-
-                # Sending the exposure time.
-                processor.exposureTime = self.cam.captureMetadata().ExposureTime
-
-                # Start the thread that sends the photo.
-                processor.event.set()
-
-                # info("Image sent by " + processor.name)
-
-            else:
-                # If there are no processors, we wait until they are available.
-                info("There are no processors available. Capture waiting.")
-                sleep(1)
+        
+        # Sending flag.
+        self.imgSendThread.imgflag = imgflag.encode()
+        
+        # Capture the jpg image.
+        self.cam.picam2.capture_file(self.imgSendThread.stream, format="jpeg")
+        
+        # Sending blue and red gains.
+        if self.cam.awb:
+            self.sendGains()
+            
+        # Sending the exposure time.
+        self.imgSendThread.exposureTime = self.cam.captureMetadata().ExposureTime
+        
+        # Thread start.
+        self.imgSendThread.event.set()         
 
     # Function for calculating automatic exposure parameters.
-    def calcExpParmsAE(self):
+    def calcExpParmsAE(self):        
         
-        # Adjustment indicator reducing exposure time.
-        adjust1 = False
-        # Adjustment indicator increasing exposure time.
-        adjust2 = False
+        # ScalerCrop is set for automatic exposure.
+        self.cam.picam2.controls.ScalerCrop = config.AEScalerCrop
         
-        # Set a base exposure time.
-        self.cam.picam2.controls.ExposureTime = self.baseExpTime
-        self.cam.AeExposureTime = self.baseExpTime
+        # Reset exposure time.
+        self.cam.picam2.controls.ExposureTime = 0
         
         # Automatic exposure is activated.
-        self.cam.picam2.controls.AeEnable = True
-
-        self.cam.picam2.options["quality"] = self.jpegQualityAE
+        self.cam.picam2.controls.AeEnable = True               
         
-        # Take a first exposure to get metadata.
-        self.cam.picam2.capture_file(config.nullFile, format="jpeg")
+        # Waiting time to reach auto exposure convergence.        
+        sleep(config.AEWaitFrames * self.cam.captureMetadata().FrameDuration * 1e-6)        
         
-        self.cam.AeExposureTime = self.baseExpTime
-
-        # Fake images are taken to update metadata.
-        # In each iteration of the loop the exposure time is increased 500 us.
-        # The goal is to get AnalogueGain = 1.
+        oldAeExposureTime = self.cam.captureMetadata().ExposureTime
         
+        retries = 0
         while True:
-            
-            # This loop is used to stabilize the new exposure time.
-            while abs((self.cam.captureMetadata().ExposureTime 
-                       - self.cam.AeExposureTime)) > config.timeExpTolerance:                
-                self.cam.picam2.capture_file(config.nullFile, format="jpeg")
-                
-            # Once the correct time is found, the infinity loop is exited.
-            if (self.cam.captureMetadata().AnalogueGain == 1 and adjust2):
+            convergence = True
+            for i in range(10):
+                retries += 1
+                newAeExposureTime = self.cam.captureMetadata().ExposureTime
+                if abs(oldAeExposureTime - newAeExposureTime) > config.timeExpTolerance:
+                   oldAeExposureTime = newAeExposureTime
+                   convergence = False
+                   break
+            if convergence:
                 break
-                
-            # If the analog gain is 1, we reduce the exposure time.
-            elif self.cam.captureMetadata().AnalogueGain == 1:
-                self.cam.AeExposureTime -= 500
-                self.cam.picam2.controls.ExposureTime = self.cam.AeExposureTime
-                adjust1 = True
-                continue
             
-            # If the analog gain is greater than 1, we increase the exposure
-            # time.            
-            if self.cam.captureMetadata().AnalogueGain > 1:
-                self.cam.AeExposureTime += 500
-                self.cam.picam2.controls.ExposureTime = self.cam.AeExposureTime
-                if adjust1:
-                    adjust2 = True
-            
-        # Once an autoexposure time is established, it is taken as a base for
-        # future autoexposure calculations.
-        self.baseExpTime = self.cam.AeExposureTime        
-            
+        self.cam.AeExposureTime =  newAeExposureTime
         info("Autoexposure time = " + str(self.cam.AeExposureTime) + 
              " us\n" + " "*29 +
              "Analogue gain = " + 
              str(self.cam.captureMetadata().AnalogueGain))
+        
+        # info("Number of retries = " + str(retries))
+        
+        # ScalerCrop is restored.
+        self.cam.picam2.controls.ScalerCrop = self.cam.ScalerCrop       
 
         # Auto exposure is cancelled.
         self.cam.picam2.controls.AeEnable = False
@@ -602,6 +587,29 @@ class DS8Server():
                 exposureTime = self.cam.minExpTime
 
             return exposureTime
+        
+    # This function is used to stabilize the exposure time requested from the
+    # camera.
+    def stabExpTime(self, time):
+      # This loop has the function of ensuring that the camera uses
+      # the new exposure time.
+
+      numOfRetries = 0
+
+      for i in range(config.numOfRetries):
+          numOfRetries += 1
+          metadataExposureTime = self.cam.captureMetadata().ExposureTime
+          dif = abs(time - metadataExposureTime)
+          # info("Theoretical exposure time = " +
+          #       str(time) + " us\n" + " "*29 +
+          #       "Camera real time = " +
+          #       str(metadataExposureTime) + " us\n" + " "*29 +
+          #       "Difference = " + str(dif) + " us")
+          if  dif <= config.timeExpTolerance:
+              break
+
+      # info("Number of retries = " + str(numOfRetries))
+        
 
     # Sending the exposure time and analog and digital gains of the camera.
     def sendSS(self, flag):
@@ -670,8 +678,8 @@ class DS8Server():
     # application either due to keyboard interruption or other type of
     # exception.
     def infExitClient(self):
-        # Se informa al cliente.
-        # Se envía señal flag X -> salida de la aplicación.
+        # The client is informed.
+        # Flag X signal is sent -> application exit.
         with self.connectionLock:
             config.imgConn.write("X".encode())
             config.imgConn.flush()
@@ -698,16 +706,10 @@ class DS8Server():
         # Finish motor turning process.
         self.driverprocess.join()
 
-         # Terminate the image transmission threads that exist in the pool.
-        while len(config.pool):
-            streamer = config.pool.pop()
-            streamer.terminated = True
-            streamer.join(timeout=0.5)
-            info(streamer.name + " terminated")
-
         # Close camera.
         self.cam.mode = self.cam.off
-        self.cam.picam2.stop()        
+        self.cam.picam2.stop()
+        self.cam.picam2.close()        
 
         # Close connections.
         if config.imgConn:
@@ -755,11 +757,10 @@ class DS8Server():
 # This class is used to send images to the client program.
 class ImageStreamer(Thread):
 
-    def __init__(self, connLock, poolLock, exitEvent):
+    def __init__(self, connLock, exitEvent):
         super(ImageStreamer, self).__init__()
         self.daemon = True
-        self.connLock = connLock
-        self.poolLock = poolLock
+        self.connLock = connLock        
         self.stream = BytesIO()
         self.event = Event()
         self.exitEvent = exitEvent
@@ -777,15 +778,12 @@ class ImageStreamer(Thread):
                         self.sendFile(self.imgflag, self.exposureTime,
                                       self.stream)
                 finally:
-                    self.event.clear()
-                    with self.poolLock:
-                        config.pool.append(self)
-                        # info(self.name + " released")
+                    self.event.clear()                    
 
     def sendFile(self, flag, exposureTime, stream):
         config.imgConn.write(flag)
         config.imgConn.write(pack("<i", exposureTime))
-        size = stream.tell()
+        size = stream.tell()        
         config.imgConn.write(pack("<L", size))
         config.imgConn.flush()
         stream.seek(0)
@@ -837,7 +835,7 @@ if __name__ == "__main__":
     basicConfig(stream=stdout, level=INFO, format="%(asctime)s - %(levelname)s"
                 " - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 
-    info("DSuper8 server software ver. 20230430")
+    info("DSuper8 server software ver. 20231130")
 
     info("Starting")
 

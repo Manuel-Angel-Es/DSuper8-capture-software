@@ -7,21 +7,28 @@ User interface redesigned by Manuel Ángel.
 
 config.py: Global server variables.
 
-Latest version: 20230430.
+Latest version: 20231130.
 """
 
 # Global server variables are defined here.
-pool = []
+# pool = []
 imgConn = None
 ctrlConn = None
 ctrlReader = None
 nullFile = "/dev/null"
+
+# In auto exposure it is used to determine the exposure metering area.
+# AEScalerCrop = (x_offset, y_offset, width, height)
+AEScalerCrop = (310, 330, 3310, 2520)
 
 # This variable is used to set the exposure time in bracketed exposures.
 # If the exposure time of the camera differs from the theoretical one by a
 # value lower than that set in the variable, it is accepted as valid.
 # Initially it is fixed at 50 us.
 timeExpTolerance = 50
+
+# Number of holding frames required to achieve auto exposure convergence.
+AEWaitFrames = 25
 
 # Number of retries to reach the defined exposure time.
 numOfRetries = 100

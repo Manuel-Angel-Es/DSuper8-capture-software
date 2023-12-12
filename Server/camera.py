@@ -7,7 +7,7 @@ User interface redesigned by Manuel Ángel.
 
 camera.py: Camera configuration.
 
-Latest version: 20230430.
+Latest version: 20231130.
 """
 
 from picamera2 import Picamera2, Metadata
@@ -32,7 +32,7 @@ class DS8Camera():
         # Configured resolution.
         self.resolution = self.resolutions[0]
 
-        # Geometry of the zone of interest to be captured by the camera.
+        # Geometry of the zone of interest to be captured by the camera.        
 
         # Coordinates of the upper left corner.
         self.x_offset = 0
@@ -43,10 +43,13 @@ class DS8Camera():
         self.roiZ = 1
 
         # Width of the image.
-        self.width = self.resolution[0] * self.roiZ
+        self.width = self.resolution[1] * self.roiZ
 
         # Height of the image.
         self.height = self.resolution[1] * self.roiZ
+        
+        # Clipping rectangle (ScalerCrop).
+        self.ScalerCrop = (self.x_offset, self.y_offset, self.width, self.height)
 
         # Automatic exposure.
         self.autoExp = False
@@ -111,17 +114,26 @@ class DS8Camera():
         self.picam2.still_configuration.controls.FrameDurationLimits = (self.minExpTime, self.maxExpTime)
 
         # Dimensions of the captured image.
-        self.picam2.still_configuration.main.size = self.resolutions[0]
+        self.picam2.still_configuration.main.size = self.resolutions[0]        
+        self.picam2.still_configuration.sensor.output_size = self.resolutions[0]
 
         # Image format 24 bits per pixel, ordered [R, G, B].
         self.picam2.still_configuration.main.format = ("RGB888")
+        
+        # Image raw format.
+        self.picam2.still_configuration.raw.format = ("SRGGB12_CSI2P")        
+
+        # Capture jpg images.
+        self.captureJpg = True
+
+        # Capture raw images.
+        self.captureRaw = False
 
         # Unknown parameters.
         # Default configuration.
         self.picam2.still_configuration.main.stride = None
         # self.picam2.still_configuration.framesize = None
-        self.picam2.still_configuration.lores = None
-        self.picam2.still_configuration.raw = None
+        self.picam2.still_configuration.lores = None        
 
         # Do not allow queuing images.
         # The captured image corresponds to the moment of the capture order.
@@ -141,7 +153,8 @@ class DS8Camera():
         # True: Algoritm AEC/AGC enabled.
         self.picam2.controls.AeEnable = False
         
-        # This variable gives error "Control AEConstraintMode is not advertised by libcamera".
+        # This variable gives error "Control AEConstraintMode is not advertised
+        # by libcamera".
         # However, with the camera started it can be referenced normally. 
         # AEConstraintMode:
         # 0: Normal. Normal metering.
@@ -169,9 +182,7 @@ class DS8Camera():
 
         # NoiseReductionMode: configuration parameter.
 
-        # FrameDurationLimits: configuration parameter.
-
-        # ColourCorrectionMatrix
+        # FrameDurationLimits: configuration parameter.        
 
         # Saturation: value between 0.0 and 32.0. Default 1.0.
         self.picam2.controls.Saturation = 1.0
@@ -223,32 +234,18 @@ class DS8Camera():
         sleep(1)
 
     # Initial settings.
-
-    # zoomDial
-
-    def setZ(self, value):
-        self.roiZ = float(value) / 1000
-
-        self.x_offset = int(self.resolutions[1][0] * (1 - self.roiZ) / 2)
-        self.y_offset = int(self.resolutions[1][1] * (1 - self.roiZ) / 2)
-
-        self.width = int(self.resolutions[1][0] * self.roiZ)
-        self.height = int(self.resolutions[1][1] * self.roiZ)
-
-        self.picam2.controls.ScalerCrop = (self.x_offset, self.y_offset,
-                                           self.width, self.height)
-
-    # roiUpButton - roiDownButton
+    
+    # zoomdial, roiUpButton, roiDownButton
     def setY(self, value):
         self.y_offset = value
-        self.picam2.controls.ScalerCrop = (self.x_offset, self.y_offset,
-                                           self.width, self.height)
+        self.ScalerCrop = (self.x_offset, self.y_offset, self.width, self.height)
+        self.picam2.controls.ScalerCrop = self.ScalerCrop
 
-    # roiLeftButton - roiRightButton
+    # zoomdial, roiLeftButton, roiRightButton
     def setX(self, value):
-        self.x_offset = value
-        self.picam2.controls.ScalerCrop = (self.x_offset, self.y_offset,
-                                           self.width, self.height)
+        self.x_offset = value        
+        self.ScalerCrop = (self.x_offset, self.y_offset, self.width, self.height)
+        self.picam2.controls.ScalerCrop = self.ScalerCrop
 
     # Camera settings.
 
@@ -363,7 +360,8 @@ class DS8Camera():
     # resolutionBox
     def setSize(self, idx):
         self.picam2.stop()
-        self.picam2.still_configuration.main.size = self.resolutions[idx]
+        self.picam2.still_configuration.main.size = self.resolutions[idx]        
+        self.picam2.still_configuration.sensor.output_size = self.resolutions[idx]
         self.picam2.configure("still")
         self.picam2.start()
         if idx == 0:
@@ -371,7 +369,7 @@ class DS8Camera():
         elif idx == 1:
             resol = "4056x3040 px"
 
-        info("Camera resolution " + resol)
+        info("Camera resolution " + resol)   
 
     # This function is used to capture the metadata of the images.
     def captureMetadata(self):
