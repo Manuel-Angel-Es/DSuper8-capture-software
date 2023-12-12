@@ -7,7 +7,7 @@ User interface redesigned by Manuel Ángel.
 
 DS8Config.py: Module to save the configuration and restore it from a file.
 
-Latest version: 20230430.
+Latest version: 20231130.
 """
 
 from configparser import ConfigParser
@@ -58,11 +58,13 @@ class DS8ConfigParser(ConfigParser):
         sec = "Capture"
         self.set(sec, "endframebox", str(ui.endFrameBox.value()))
         self.set(sec, "bracketingbox", str(ui.bracketingBox.value()))
+        self.set(sec, "oldbracketingbox", str(ui.oldbracketingBox))
         self.set(sec, "saveallcheckbox", str(ui.saveAllCheckBox.isChecked()))
         self.set(sec, "stopsbox", str(round(ui.stopsBox.value(), 1)))
-        self.set(sec, "autoexpcheckbox", str(ui.autoExpCheckBox.isChecked()))
-        self.set(sec, "timeexpbox", str(ui.manExpTime))
-        if ui.capFolderBox.text() == "Seleccionar carpeta de captura":
+        self.set(sec, "oldstopsbox", str(ui.oldStopsBox))
+        self.set(sec, "timeexpbox", str(round(ui.manExpTime, 1)))
+        self.set(sec, "autoexpcheckbox", str(ui.autoExpCheckBox.isChecked()))        
+        if ui.capFolderBox.text() == "Select capture folder":
             self.set(sec, "capfolderbox", "")
         else:
             self.set(sec, "capfolderbox", ui.capFolderBox.text())
@@ -73,6 +75,8 @@ class DS8ConfigParser(ConfigParser):
         self.set(sec, "vflipcheckbox", str(ui.vFlipCheckBox.isChecked()))
         self.set(sec, "hflipcheckbox", str(ui.hFlipCheckBox.isChecked()))
         self.set(sec, "bwcheckbox", str(ui.bwCheckBox.isChecked()))
+        self.set(sec, "jpgcheckbox", str(ui.jpgCheckBox.isChecked()))
+        self.set(sec, "rawcheckbox", str(ui.rawCheckBox.isChecked()))
         self.set(sec, "constraintmodebox", str(ui.constraintModeBox.currentIndex()))
         self.set(sec, "exposuremodebox", str(ui.exposureModeBox.currentIndex()))
         self.set(sec, "meteringmodebox", str(ui.meteringModeBox.currentIndex()))
@@ -81,6 +85,7 @@ class DS8ConfigParser(ConfigParser):
 
         sec = "Post-capture"
         self.set(sec, "showhist", str(ui.showHist.isChecked()))
+        self.set(sec, "oldshowhist", str(ui.oldShowHist))
         self.set(sec, "logarithmhist", str(ui.logarithmHist.isChecked()))
         self.set(sec, "sharpcheckbox", str(ui.sharpCheckBox.isChecked()))
         self.set(sec, "roundcorns", str(ui.roundCorns.isChecked()))
@@ -135,16 +140,18 @@ class DS8ConfigParser(ConfigParser):
         sec = "Capture"
         ui.endFrameBox.setValue(self.getint(sec, "endframebox"))
         ui.bracketingBox.setValue(self.getint(sec, "bracketingbox"))
+        ui.oldbracketingBox = self.getint(sec, "oldbracketingbox")
         ui.saveAllCheckBox.setChecked(self.getboolean(sec, "saveallcheckbox"))
         ui.stopsBox.setValue(self.getfloat(sec, "stopsbox"))
-        ui.autoExpCheckBox.setChecked(self.getboolean(sec, "autoexpcheckbox"))
+        ui.oldStopsBox = self.getfloat(sec, "oldstopsbox")
         ui.timeExpBox.setValue(self.getfloat(sec, "timeexpbox"))
+        ui.autoExpCheckBox.setChecked(self.getboolean(sec, "autoexpcheckbox"))        
         capFolder = self.get(sec, "capfolderbox").strip()
         if capFolder and Path(capFolder).is_dir():
             ui.capFolderBox.setText(capFolder)
         else:
             ui.capFolderBox.setText("")
-            info("La carpeta " + capFolder + " no existe")
+            info(capFolder + " folder does not exist")
         config.frameNumber = self.getint(sec, "framelcd")
         config.fileNumber = config.frameNumber
         ui.frameLcd.display(config.frameNumber)
@@ -154,6 +161,8 @@ class DS8ConfigParser(ConfigParser):
         ui.vFlipCheckBox.setChecked(self.getboolean(sec, "vflipcheckbox"))
         ui.hFlipCheckBox.setChecked(self.getboolean(sec, "hflipcheckbox"))
         ui.bwCheckBox.setChecked(self.getboolean(sec, "bwcheckbox"))
+        ui.jpgCheckBox.setChecked(self.getboolean(sec, "jpgcheckbox"))
+        ui.rawCheckBox.setChecked(self.getboolean(sec, "rawcheckbox"))
         ui.constraintModeBox.setCurrentIndex(self.getint(sec, "constraintmodebox"))
         ui.exposureModeBox.setCurrentIndex(self.getint(sec, "exposuremodebox"))
         ui.meteringModeBox.setCurrentIndex(self.getint(sec, "meteringmodebox"))
@@ -162,6 +171,7 @@ class DS8ConfigParser(ConfigParser):
 
         sec = "Post-capture"
         ui.showHist.setChecked(self.getboolean(sec, "showhist"))
+        ui.oldShowHist = self.getboolean(sec, "oldshowhist")
         ui.logarithmHist.setChecked(self.getboolean(sec, "logarithmhist"))
         ui.sharpCheckBox.setChecked(self.getboolean(sec, "sharpcheckbox"))
         ui.roundCorns.setChecked(self.getboolean(sec, "roundcorns"))
@@ -253,14 +263,15 @@ class DS8ConfigParser(ConfigParser):
                     ok = False
                     break
 
-        if ok and len(self.options("Capture")) != 9:
+        if ok and len(self.options("Capture")) != 11:
             ok = False
 
         if ok:
 
-            for option in ["endframebox", "bracketingbox", "saveallcheckbox",
-                           "stopsbox", "autoexpcheckbox", "timeexpbox",
-                           "capfolderbox", "framelcd", "nextframebox"]:
+            for option in ["endframebox", "bracketingbox", "oldbracketingbox",
+                           "saveallcheckbox", "stopsbox", "oldstopsbox",
+                           "autoexpcheckbox", "timeexpbox", "capfolderbox",
+                           "framelcd", "nextframebox"]:
                 if option not in self.options("Capture"):
                     ok = False
                     break
@@ -274,11 +285,12 @@ class DS8ConfigParser(ConfigParser):
                     ok = False
                     break
 
-        if ok and len(self.options("Advanced")) != 8:
+        if ok and len(self.options("Advanced")) != 10:
             ok = False
 
         if ok:
             for option in ["vflipcheckbox", "hflipcheckbox", "bwcheckbox",
+                           "jpgcheckbox", "rawcheckbox",
                            "constraintmodebox", "exposuremodebox",
                            "meteringmodebox", "resolutionbox", "sharpnessbox"]:
                 if (option not in self.options("Advanced")
@@ -286,11 +298,11 @@ class DS8ConfigParser(ConfigParser):
                     ok = False
                     break
 
-        if ok and len(self.options("Post-capture")) != 11:
+        if ok and len(self.options("Post-capture")) != 12:
             ok = False
 
         if ok:
-            for option in ["showhist", "logarithmhist", "sharpcheckbox",
+            for option in ["showhist", "oldshowhist", "logarithmhist", "sharpcheckbox",
                            "roundcorns", "rotationcheckbox", "rotationbox",
                            "croppingcheckbox", "croptopbox", "cropleftbox",
                            "croprightbox", "cropbottombox"]:

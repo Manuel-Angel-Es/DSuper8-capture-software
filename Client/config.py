@@ -7,7 +7,7 @@ User interface redesigned by Manuel Ángel.
 
 config.py: Configuration module and global variables of the client software.
 
-Last version: 20230430.
+Last version: 20231130.
 """
 
 
@@ -22,8 +22,12 @@ from logging import info
 # Configuration variables.
 
 # IP address of the server.
-server_ip = "HAL9004.maodog.es"
-# server_ip = "192.168.1.15"
+# server_ip = "HAL9005.maodog.es"
+server_ip = "192.168.1.4"
+
+# GUI theme.
+# GUITheme = "Light"
+GUITheme = "Dark"
 
 # Examples of directories for Linux and Windows are included.
 # Comment those that do not apply.
@@ -86,6 +90,10 @@ testImg = False
 
 # Capture indicator.
 captureOn = False
+
+# Capture modes.
+captureJpg = True
+captureRaw = False
 
 # Latest system state.
 # It is used in the image window naming.
@@ -196,8 +204,6 @@ motorNotMoving = True
 
 # Function for reading images from file.
 # Used for reading images from the Resources directory.
-
-
 def readImgFromFile(file):
     global resourcesPath
     imgFile = QFile(resourcesPath + file)

@@ -8,15 +8,17 @@ User interface redesigned by Manuel Ángel.
 DS8ImgThread.py: Class and support functions for reading and processing the
                  images.
 
-Last version: 20230430.
+Last version: 20231130.
 """
 
-from cv2 import (IMREAD_COLOR, resize, createMergeMertens, createMergeDebevec,
+from cv2 import (IMREAD_COLOR, resize, createMergeMertens,createMergeDebevec,
                  createCalibrateDebevec, getRotationMatrix2D, warpAffine,
-                 imwrite, Laplacian, IMWRITE_JPEG_QUALITY, imdecode, imencode,
+                 imwrite, Laplacian,IMWRITE_JPEG_QUALITY, imdecode, imencode,
                  createTonemap, createTonemapReinhard, CV_64F,
                  createTonemapDrago, createTonemapMantiuk, cvtColor,
-                 COLOR_BGR2GRAY, putText, FONT_HERSHEY_SIMPLEX)
+                 COLOR_BGR2GRAY)
+
+from PIL import ImageFont, ImageDraw, Image as ImagePil
 
 from threading import Event
 
@@ -81,8 +83,8 @@ class imgThread(QThread):
     # Enable capture widgets information signal.
     enableCaptureWidgetsSig = pyqtSignal()
 
-    # Exception on camera information signal.
-    PiCameraExcpSig = pyqtSignal()
+    # Image file write exception signal.
+    imgFileWrtExcpSig = pyqtSignal(str, str)
 
     # Displayed image information event.
     displayImgEvent = Event()
@@ -111,7 +113,7 @@ class imgThread(QThread):
         # Group of images from multiple exposures to obtain an HDR image.
         self.imglist = []
 
-        # Índice utilizado para la matriz de tiempos de exposición.
+        # Index used for the exposure time matrix.
         self.indexETM = 0
 
         # Indicator of the type of information received from the server.
@@ -126,24 +128,47 @@ class imgThread(QThread):
         self.roundcornBRImg = config.readImgFromFile("roundcornBR.png")
         self.roundcornBLImg = config.readImgFromFile("roundcornBL.png")
 
-        # Image name.
+        # Image name generic:
         self.imageName = ""
 
-        # Image file name.
-        self.filename = ""
+        # Image name previous.
+        self.imageNamePr = ""
+
+        # Image name jpg.
+        self.imageNameJpg = ""
+
+        # Image name raw.
+        self.imageNameRaw = ""
+
+        # Image file name jpg.
+        self.fileNameJpg = ""
+
+        # Image file name raw.
+        self.fileNameRaw = ""        
 
         # Permission to save bracketing images.
         self.saveBracketPerm = False
 
-        #  Focus index coordinates.
-        self.x1 = 0
-        self.y1 = self.x1
-        self.x2 = 0
-        self.y2 = 0
-
         # Final image resolution.
         self.finalh = config.imgCapFinalH
         self.finalw = config.imgCapFinalW
+        
+        # Font size.
+        self.fontSize = int(self.finalh / 20)
+        
+        # Font to use in preview images.
+        self.Font = ImageFont.truetype(config.resourcesPath + "Font.ttf",
+                                       self.fontSize)        
+        
+        # Focus index coordinates. 
+        self.x1 = int(self.finalh / 10)
+        self.y1 = self.x1
+        self.x2 = int(self.x1 + self.fontSize * 5)
+        self.y2 = self.y1 + int(self.fontSize * 1.2)
+        
+        # File write error indicator.
+        self.noOsError = True
+        
 
     # Rotating and cropping the image.
     def postProcess(self, img):
@@ -188,38 +213,31 @@ class imgThread(QThread):
         return img
 
     # Draw the sharpness index on the image.
-    def drawImageSharpness(self, img):
-        self.x1 = int(config.imgCapIniH / 10.8)
-        self.y1 = self.x1
-        self.x2 = int(config.imgCapIniH / 3.4)
-        self.y2 = int(config.imgCapIniH / 7)
-        self.fontScale = round(config.imgCapIniH / 540, 1)
-        self.tickness = int(self.fontScale * 2)
+    def drawImageSharpness(self, img):        
 
         imgSharp = self.imageSharpness(img)
 
         config.numMeasSharp += 1
-
-        putText(img, "Focus: ", (self.x1, self.y1),
-                FONT_HERSHEY_SIMPLEX, self.fontScale, (0, 0, 255),
-                self.tickness)
-
-        putText(img, str(imgSharp), (self.x2, self.y1),
-                FONT_HERSHEY_SIMPLEX, self.fontScale, (0, 0, 255),
-                self.tickness)
+        
+        imgPil = ImagePil.fromarray(img)
+        draw = ImageDraw.Draw(imgPil)
+        draw.text((self.x1, self.y1), "Focus:", font=self.Font,
+                  anchor="ls", fill=(0, 0, 255, 0))
+        draw.text((self.x2, self.y1), str(imgSharp),
+                  font=self.Font, anchor="ls", fill=(0, 0, 255, 0))      
 
         if config.numMeasSharp > config.valSharp:
 
             if (imgSharp > config.maxSharpness):
                 config.maxSharpness = imgSharp
 
-            putText(img, "Max: ", (self.x1, self.y2),
-                    FONT_HERSHEY_SIMPLEX, self.fontScale, (0, 0, 255),
-                    self.tickness)
-
-            putText(img, str(config.maxSharpness), (self.x2, self.y2),
-                    FONT_HERSHEY_SIMPLEX, self.fontScale, (0, 0, 255),
-                    self.tickness)
+            draw.text((self.x1, self.y2), "Maximum:", font=self.Font,
+                      anchor="ls", fill=(0, 0, 255, 0))
+            draw.text((self.x2, self.y2),
+                      str(config.maxSharpness),
+                      anchor="ls", font=self.Font, fill=(0, 0, 255, 0))
+            
+        img = array(imgPil)
 
         return img
 
@@ -349,10 +367,14 @@ class imgThread(QThread):
 
         i = 1
         while True:
-            self.imageName = "Test{:05d}.jpg".format(i)
-
-            self.filename = config.capFolder.strip() + "/" + self.imageName
-            if Path(self.filename).exists():
+            
+            self.imageNameJpg = "Test{:05d}.jpg".format(i)
+            self.fileNameJpg = config.capFolder.strip() + "/" + self.imageNameJpg            
+            
+            self.imageNameRaw = "Test{:05d}.dng".format(i)
+            self.fileNameRaw = config.capFolder.strip() + "/" + self.imageNameRaw
+            
+            if Path(self.fileNameJpg).exists() or Path(self.fileNameRaw).exists():               
                 i += 1
                 continue
             else:
@@ -363,34 +385,50 @@ class imgThread(QThread):
         match config.lastMode:
 
             case "P":
-                self.imageName = "Previous " + str(config.numImgRec - 1)
+                self.imageNamePr = "Previous " + str(config.numImgRec - 1)
 
-            case "T":
-                self.testFileName()
+            case "T":                
+                if not config.captureRaw:                    
+                    self.testFileName()
 
             case "C":
-                self.imageName = "img{:05d}.jpg".format(config.fileNumber)
+                if config.captureJpg:
+                    self.imageNameJpg = "img{:05d}.jpg".format(config.fileNumber)
 
-        # Sharpness index calculation and display.
-        # Only for preview images.
-        if (config.lastMode == "P" and config.showSharp and
-                config.motorNotMoving):
+                if config.captureRaw and not config.captureJpg:
+                    self.imageNameRaw = "img{:05d}.dng".format(config.fileNumber)
 
-            img = self.drawImageSharpness(img)
+                    # Show raw image.
+                    self.showImage(img, self.imageNameRaw)
+        
+        if config.lastMode == "P":
+           self.imageName = self.imageNamePr                      
 
+        else:            
+            if config.captureJpg:
+                self.imageName = self.imageNameJpg
+
+            elif config.captureRaw:
+                self.imageName = self.imageNameRaw        
+        
         # Image resize.
         img = self.imageResize(img)
 
         # The image histogram is displayed.
         if config.showHist:
-            self.showHist(img, self.imageName)
+            self.showHist(img, self.imageName)        
+
+        # Sharpness index calculation and display.
+        # Only for preview images.
+        if config.lastMode == "P" and config.showSharp and config.motorNotMoving:                
+            img = self.drawImageSharpness(img)
 
         # Rounding the image angles.
         if config.roundcorns:
-            img = self.roundCorners(img)
+            img = self.roundCorners(img)        
 
         # The image is shown.
-        self.showImage(img, self.imageName)
+        self.showImage(img, self.imageName)            
 
         return img
 
@@ -398,17 +436,18 @@ class imgThread(QThread):
     def writeBracketImgFile(self, img):
 
         if config.lastMode == "T":
-            self.testFileName()
+            if not config.captureRaw:
+                self.testFileName()
 
-            filename = (self.filename[:-4] +
-                        "-{:02d}.jpg".format(self.indexETM + 1))
-
-            filename = Path(filename)
+            fileNameStr = (self.fileNameJpg[:-4] +
+                           "-{:02d}.jpg".format(self.indexETM + 1))            
 
         else:
-            filename = (Path(config.capFolder.strip()
-                        + "/img{:05d}-{:02d}.jpg".format(config.fileNumber,
-                                                       self.indexETM + 1)))
+            fileNameStr = (config.capFolder.strip()
+                           + "/img{:05d}-{:02d}.jpg".format(config.fileNumber,
+                           self.indexETM + 1))
+            
+        fileName = Path(fileNameStr)    
 
         # We encode img in jpg.
         (ret, imgJpg) = imencode(".jpg", img, (int(IMWRITE_JPEG_QUALITY), 97))
@@ -423,26 +462,52 @@ class imgThread(QThread):
         imgExif.model = "HQ Camera"
         imgExif.exposure_time = self.exposureTime
 
-        # Save the image.
-        with (open(filename, "wb")) as imfile:
-            imfile.write(imgExif.get_file())
-
+        # Save the image.            
+        if self.noOsError:
+            
+            try:
+                with (open(fileName, "wb")) as imfile:
+                    imfile.write(imgExif.get_file())
+                    
+            except OSError as e:
+                self.noOsError = False
+                error = getattr(e, 'message', repr(e))            
+                info(error)
+                if not config.lastMode == "T":               
+                    self.endCaptureSig.emit()
+                    
+                self.imgFileWrtExcpSig.emit(error, fileNameStr)            
+            
+                
+    # Function to save image jpg files.
     def writeImgFile(self, img):
 
-        self.filename = config.capFolder.strip() + "/" + self.imageName
-
-        with open(Path(self.filename), "wb"):
-
+        self.fileNameJpg = config.capFolder.strip() + "/" + self.imageNameJpg
+        
+        if self.noOsError:
             # Write JPG file.
-            imwrite(self.filename, img,
-                    [int(IMWRITE_JPEG_QUALITY), 97])
+            result = imwrite(self.fileNameJpg, img,
+                             [int(IMWRITE_JPEG_QUALITY), 97])
+            
+            if not result:
+                self.noOsError = False
+                error = ("OpenCV imwrite() function reports error.\n" +
+                        "Possibly disk full.")
+                info(error)
+                
+                if not config.testImg:                
+                    self.endCaptureSig.emit()
+                    
+                self.imgFileWrtExcpSig.emit(error, self.fileNameJpg)
+                
+        if self.noOsError:
 
-        if config.testImg:
-            info("Test image saved in: " + str(self.filename))
-            config.testImg = False
-
-        else:
-            info("Captured image saved in: " + str(self.filename))
+            if config.testImg:
+                info("Test image saved in: " + str(self.fileNameJpg))
+                config.testImg = False
+    
+            else:
+                info("Captured jpg image saved in: " + str(self.fileNameJpg))
 
    # With this function the server is requested to capture and send a new
    # image.
@@ -452,7 +517,20 @@ class imgThread(QThread):
         info("Image " + str(config.numImgRec) + " requested")
 
     # Processing functions of the information received from the server.
+    
+    # This function is used to extract images from the stream coming from the
+    # server.
+    def imgFlag_spab(self):
+        self.exposureTime = unpack("<i", self.conn.read(calcsize("<i")))[0]
+        self.imageLen = unpack("<L", self.conn.read(calcsize("<L")))[0]
 
+        # Save image data to temporary storage.
+        self.imageStream.write(self.conn.read(self.imageLen))
+        self.imageStream.seek(0)
+
+        # File to opencv image.
+        self.cvimg = imdecode(fromstring(self.imageStream.read(self.imageLen),
+                                         dtype=uint8), IMREAD_COLOR)
     # Flag e -> automatic exposure time.
     def imgflag_e(self):
         ssAE = unpack("<l", self.conn.read(calcsize("<l")))[0]
@@ -476,19 +554,83 @@ class imgThread(QThread):
 
         self.updateGainsSig.emit(gblue, gred)
 
-    def imgFlag_spab(self):
+    # Flag d -> raw-dng image file.    
+    def imgFlag_d(self):        
+        
         self.exposureTime = unpack("<i", self.conn.read(calcsize("<i")))[0]
-        self.imageLen = unpack("<L", self.conn.read(calcsize("<L")))[0]
+        self.imageLen = unpack("<L", self.conn.read(calcsize("<L")))[0]        
 
         # Save image data to temporary storage.
         self.imageStream.write(self.conn.read(self.imageLen))
         self.imageStream.seek(0)
 
-        # File to opencv image.
-        self.cvimg = imdecode(fromstring(self.imageStream.read(self.imageLen),
-                                         dtype=uint8), IMREAD_COLOR)
+        info("Raw-dng image " + str(config.numImgRec) + " received" +
+             " - " + str(self.imageLen) + " bytes - Exp. time " +
+             str(self.exposureTime) + " us")
 
-    # Preview Image.
+        if config.captureRaw and not config.captureJpg:
+            
+            # New image is requested from the server.
+            if (config.captureOn and config.fileNumber < config.frameLimit):
+                self.newImage()
+
+            else:
+                self.enableCaptureWidgetsSig.emit()       
+        
+        if config.lastMode == "T":            
+            self.testFileName()            
+        else:
+            self.imageNameRaw = "img{:05d}.dng".format(config.fileNumber)
+            self.fileNameRaw = config.capFolder.strip() + "/" + self.imageNameRaw
+            
+        if self.noOsError:
+            
+            try:        
+                with open(self.fileNameRaw, "wb") as outfile:
+                    # Copy the BytesIO stream to the output file.
+                    outfile.write(self.imageStream.getbuffer())                
+                
+            except OSError as e:
+                self.noOsError = False
+                error = getattr(e, 'message', repr(e))            
+                info(error)
+                if not config.lastMode == "T":                
+                    self.endCaptureSig.emit()
+                    
+                self.imgFileWrtExcpSig.emit(error, self.fileNameRaw)
+                    
+                
+        if self.noOsError:
+            
+            info("Captured raw image saved in: " + str(self.fileNameRaw))
+
+    # Witness image of raw captures.
+    def imgFlag_D(self):
+
+        info("Witness image " + str(config.numImgRec) + " received" +
+             " - " + str(self.imageLen) + " bytes - Exp. time " +
+             str(self.exposureTime) + " us")
+        
+        if config.captureRaw and not config.captureJpg:
+            
+            # The received image number is increased.
+            config.numImgRec += 1                        
+        
+        # The image is shown.
+        self.showImage(self.cvimg, self.imageNameRaw)
+
+        if config.lastMode == "C":
+
+            if config.fileNumber >= config.frameLimit:
+                # We finished capture.
+                self.endCaptureSig.emit()
+                # We enable disabled widgets during capture.
+                self.enableCaptureWidgetsSig.emit()
+
+            # We increase file number.
+            config.fileNumber += 1      
+
+    # Preview image.
     def imgFlag_p(self):
 
         if type(self.cvimg) != ndarray:
@@ -513,17 +655,16 @@ class imgThread(QThread):
 
         info("Single image " + str(config.numImgRec) + " received" +
              " - " + str(self.imageLen) + " bytes - Exp. time " +
-             str(self.exposureTime) + " us")
-
+             str(self.exposureTime) + " us")        
+            
         # The received image number is increased.
         config.numImgRec += 1
 
         # New image is requested from the server.
         if (config.captureOn and config.fileNumber < config.frameLimit):
             self.newImage()
-
         else:
-            self.enableCaptureWidgetsSig.emit()
+            self.enableCaptureWidgetsSig.emit()        
 
         self.cvimg = self.postProcess(self.cvimg)
         self.cvimg = self.finalizeImage(self.cvimg)
@@ -559,7 +700,6 @@ class imgThread(QThread):
 
         # The image is saved in a list to later perform the fusion of the
         # images.
-
         self.imglist.append(self.cvimg)
 
         # The HDR Debevec algorithm uses time in s.
@@ -567,12 +707,10 @@ class imgThread(QThread):
         config.exposureTimes[self.indexETM] = self.exposureTime
 
         # The bracketing image is saved if this option is selected.
-
         if self.saveBracketPerm:
             self.writeBracketImgFile(self.cvimg)
 
         # The index is increased.
-
         self.indexETM += 1
 
     # The last of several bracketing images.
@@ -590,7 +728,7 @@ class imgThread(QThread):
             self.newImage()
 
         else:
-            self.enableCaptureWidgetsSig.emit()
+            self.enableCaptureWidgetsSig.emit()        
 
         self.cvimg = self.postProcess(self.cvimg)
 
@@ -603,7 +741,6 @@ class imgThread(QThread):
         config.exposureTimes[self.indexETM] = self.exposureTime
 
         # The bracketing image is saved if this option is selected.
-
         if self.saveBracketPerm:
             self.writeBracketImgFile(self.cvimg)
 
@@ -688,6 +825,23 @@ class imgThread(QThread):
                 case "s":
                     self.imgFlag_spab()
                     self.imgFlag_s()
+                    # Clearing the temporary storage of the image received from
+                    # the server.
+                    self.imageStream.seek(0)
+                    self.imageStream.truncate()
+                    
+                # Flag d -> raw-dng image file.
+                case "d":
+                    self.imgFlag_d()                    
+                    # Clearing the temporary storage of the image received from
+                    # the server.
+                    self.imageStream.seek(0)
+                    self.imageStream.truncate()
+
+                # Flag D -> witness image of raw captures.
+                case "D":
+                    self.imgFlag_spab()
+                    self.imgFlag_D()
                     # Clearing the temporary storage of the image received from
                     # the server.
                     self.imageStream.seek(0)

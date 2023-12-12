@@ -9,7 +9,7 @@ DS8Dialogs.py: Module for the visualization of the captured images, calculation
                and visualization of the histogram and management of the
                graphical user interface.
 
-Last version: 20230430.
+Last version: 20231130.
 """
 
 from PyQt6.QtGui import QImage, QPaintEvent, QPainter, QIcon
@@ -51,7 +51,6 @@ from codes import *
 # Main dialog class, created with Qt Designer and translated into Python using
 # pyuic6.
 from ui_DSuper8 import *
-
 
 # This class is used to display the images sent by the server.
 class DS8ImgDialog(QDialog):
@@ -118,22 +117,31 @@ class DS8Histogram():
         self.b_ynpa = zeros(256, dtype=float32)
         self.g_ynpa = zeros(256, dtype=float32)
         self.r_ynpa = zeros(256, dtype=float32)
-
-        plt.rcParams["toolbar"] = "None"
-        plt.rcParams["axes.facecolor"] = "#EAEAEB"
-        plt.rcParams["axes.edgecolor"] = "k"
-        plt.rcParams["xtick.color"] = "k"
-        plt.rcParams["ytick.color"] = "k"
-        self.fig = plt.figure(num=None, figsize=(4.8, 3.6), dpi=100,
-                              facecolor="#EAEAEB", edgecolor="#EAEAEB")
+        
+        if config.GUITheme == "Dark":
+            plt.rcParams["toolbar"] = "None"
+            plt.rcParams["axes.facecolor"] = "#464646"
+            plt.rcParams["axes.edgecolor"] = "#808080"
+            plt.rcParams["xtick.color"] = "#d2d2d2"
+            plt.rcParams["ytick.color"] = "#d2d2d2"
+            self.fig = plt.figure(num=None, figsize=(4.8, 3.6), dpi=100,
+                                  facecolor="#323232", edgecolor="#808080")
+        else:
+            plt.rcParams["toolbar"] = "None"
+            plt.rcParams["axes.facecolor"] = "#EAEAEB"
+            plt.rcParams["axes.edgecolor"] = "k"
+            plt.rcParams["xtick.color"] = "k"
+            plt.rcParams["ytick.color"] = "k"            
+            self.fig = plt.figure(num=None, figsize=(4.8, 3.6), dpi=100,
+                                  facecolor="#EAEAEB", edgecolor="#EAEAEB")
         self.icon = QIcon(config.resourcesPath + "DSuper8Icon.png")
         self.fig.canvas.parent().setWindowIcon(self.icon)
-        self.fig.canvas.parent().setWindowTitle("Histograma")
+        self.fig.canvas.parent().setWindowTitle("Histogram")
         # The close button is removed from the window.
         self.fig.canvas.parent().setWindowFlags(Qt.WindowType.Window
                                     | Qt.WindowType.WindowTitleHint
                                     | Qt.WindowType.WindowMinimizeButtonHint
-                                                | Qt.WindowType.WindowMaximizeButtonHint)
+                                    | Qt.WindowType.WindowMaximizeButtonHint)
 
         self.mngr = plt.get_current_fig_manager()
 
@@ -263,6 +271,11 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         # executed.
         self.exitAppCalled = False
 
+        # Old settings.        
+        self.oldbracketingBox = 1
+        self.oldStopsBox = 0.0
+        self.oldShowHist = True
+
     # This function is used to send control sequences to the server.
     def sendCtrl(self, cmd):
         info("CTRL: " + cmd)
@@ -303,6 +316,9 @@ class DS8Dialog(QDialog, Ui_DSuper8):
 
         # Enable capture widgets information signal.
         self.imgthread.enableCaptureWidgetsSig.connect(self.enableCaptureWidgets)
+        
+        # Image file write exception signal.        
+        self.imgthread.imgFileWrtExcpSig.connect(self.imgFileWrtExcp)
 
         # Output signal reported by server.
         self.imgthread.exitSig.connect(self.exitApp)
@@ -315,7 +331,7 @@ class DS8Dialog(QDialog, Ui_DSuper8):
     def sendInitConfig(self):
 
         # Zoom dial setting.
-        self.sendCtrl(setZ + str(self.zoomDial.value()))
+        self.setZoom(self.zoomDial.value())
 
         # Setting the region of interest.
         self.sendCtrl(setX + str(self.x_offset))
@@ -364,6 +380,18 @@ class DS8Dialog(QDialog, Ui_DSuper8):
             self.saturationBox.setValue(0.0)
         else:
             self.saturationBox.setValue(1.0)
+            
+        # Capture jpg images.
+        if self.jpgCheckBox.isChecked():
+            self.setJpg(True)
+        else:
+            self.setJpg(False)
+            
+        # Capture raw-dng images.
+        if self.rawCheckBox.isChecked():
+            self.setRaw(True)
+        else:
+            self.setRaw(False)            
 
         # Capture resolution.
         self.setCapRes(self.resolutionBox.currentIndex())
@@ -375,7 +403,7 @@ class DS8Dialog(QDialog, Ui_DSuper8):
     def initPostCapture(self):
 
         # Show histogram.
-        if self.showHist.isChecked():
+        if self.showHist.isChecked() and self.jpgCheckBox.isChecked():
             self.initHistogram(True)
             # Y axis of the histogram logarithmic.
             if self.logarithmHist.isChecked():
@@ -406,7 +434,7 @@ class DS8Dialog(QDialog, Ui_DSuper8):
 
     # Slots connected to the signals generated by the UI.
 
-    # Setup.
+    # Setup.   
 
     # zoomDial
     def setZoom(self, zoomval):
@@ -430,7 +458,10 @@ class DS8Dialog(QDialog, Ui_DSuper8):
             self.roiRightButton.setEnabled(True)
             self.roiDownButton.setEnabled(True)
 
-        self.sendCtrl(setZ + str(self.roiZ))
+        self.sendCtrl(imageWidth + str(self.imgZoomW))
+        self.sendCtrl(setX + str(self.x_offset))
+        self.sendCtrl(imageHeight + str(self.imgZoomH))
+        self.sendCtrl(setY + str(self.y_offset))
 
         # Sharpness measurement reset.
         config.numMeasSharp = 0
@@ -561,6 +592,8 @@ class DS8Dialog(QDialog, Ui_DSuper8):
 
             # Enable preview controls.
             self.zoomDial.setEnabled(True)
+            self.label_6.setEnabled(True)
+            self.label_7.setEnabled(True)
             if self.zoomDial.value() != 1000:
                 self.roiUpButton.setEnabled(True)
                 self.roiLeftButton.setEnabled(True)
@@ -581,6 +614,7 @@ class DS8Dialog(QDialog, Ui_DSuper8):
             self.sharpnessLabel.setEnabled(True)
             self.sharpnessBox.setEnabled(True)
             self.sharpCheckBox.setEnabled(True)
+            self.DS8tabWidget.setTabEnabled(3, True)
             self.roundCorns.setEnabled(True)
             self.rotationCheckBox.setEnabled(True)
             if self.rotationCheckBox.isChecked():
@@ -618,6 +652,8 @@ class DS8Dialog(QDialog, Ui_DSuper8):
 
             # Disable preview controls.
             self.zoomDial.setEnabled(False)
+            self.label_6.setEnabled(False)
+            self.label_7.setEnabled(False)
             self.roiUpButton.setEnabled(False)
             self.roiLeftButton.setEnabled(False)
             self.roiRightButton.setEnabled(False)
@@ -636,6 +672,8 @@ class DS8Dialog(QDialog, Ui_DSuper8):
             self.sharpnessLabel.setEnabled(False)
             self.sharpnessBox.setEnabled(False)
             self.sharpCheckBox.setEnabled(False)
+            if not config.captureJpg:
+                self.DS8tabWidget.setTabEnabled(3, False)
             self.roundCorns.setEnabled(False)
             self.rotationCheckBox.setEnabled(False)
             self.rotationBox.setEnabled(False)
@@ -675,8 +713,9 @@ class DS8Dialog(QDialog, Ui_DSuper8):
                 self.frameLcd.display(1)
 
             self.dirty = False
-            self.frameLcd.setStyleSheet("""QLCDNumber {background-color:
-                                        rgb(245, 255, 172)}""")
+            self.frameLcd.setStyleSheet("""QLCDNumber {
+                                        background-color: rgb(245, 255, 172);
+                                        color: rgb(0, 0, 0);}""")
             self.frameLcd.setEnabled(True)
             self.gotoCheckBox.setEnabled(True)
             self.passToCheckbox.setEnabled(True)
@@ -707,8 +746,12 @@ class DS8Dialog(QDialog, Ui_DSuper8):
             config.frameNumber = 0
             self.dirty = True
             self.captureTestBtn.setEnabled(False)
-            self.frameLcd.setStyleSheet("""QLCDNumber {background-color:
-                                        rgb(241, 241, 236)}""")
+            if config.GUITheme == "Dark":
+                self.frameLcd.setStyleSheet("""QLCDNumber {
+                                            background-color: rgb(100, 100, 100);}""")
+            else:
+                self.frameLcd.setStyleSheet("""QLCDNumber {
+                                            background-color: rgb(241, 241, 236);}""")
             self.frameLcd.setEnabled(False)
             self.frameLcd.display(0)
             self.gotoCheckBox.setEnabled(False)
@@ -735,10 +778,11 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         # Sharpness measurement reset.
         config.numMeasSharp = 0
         config.maxSharpness = 0
-
-        self.updateStatus("Continuous reverse motor")
+        
         self.stopButton.setEnabled(True)
         self.disableButtons()
+
+        self.updateStatus("Continuous reverse motor")
 
     # reverseButton
     def motorRev(self):
@@ -752,10 +796,11 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         # Sharpness measurement reset.
         config.numMeasSharp = 0
         config.maxSharpness = 0
-
-        self.updateStatus("1 frame reverse")
+        
         self.stopButton.setEnabled(False)
         self.disableButtons()
+
+        self.updateStatus("1 frame reverse")
 
     # stopButton
     def motorStop(self):
@@ -776,10 +821,10 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         # Sharpness measurement reset.
         config.numMeasSharp = 0
         config.maxSharpness = 0
-
-        self.updateStatus("1 frame advance")
+        
         self.stopButton.setEnabled(False)
         self.disableButtons()
+        self.updateStatus("1 frame advance")
 
     # ffdButton
     def motorffd(self):
@@ -793,10 +838,10 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         # Sharpness measurement reset.
         config.numMeasSharp = 0
         config.maxSharpness = 0
-
-        self.updateStatus("Continuous advance motor")
+        
         self.stopButton.setEnabled(True)
         self.disableButtons()
+        self.updateStatus("Continuous advance motor")
 
     # configFileBox
     def checkconfigFileBox(self, text):
@@ -815,6 +860,8 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         # Configuration file selection dialog.
         fileDialog = QFileDialog()
         fileDialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
+        fileDialog.setOptions(QFileDialog.Option.DontUseNativeDialog)
+        fileDialog.setWindowIcon(self.icon)
         fileDialog.setWindowTitle("Select configuration file")
         fileDialog.setDirectory(config.defaultFolder)
         filtros = ["*.conf"]
@@ -839,6 +886,7 @@ class DS8Dialog(QDialog, Ui_DSuper8):
                 # Pop-up message if there are errors loading the configuration
                 # file.
                 msgBox = QMessageBox()
+                msgBox.setWindowIcon(self.icon)
                 msgBox.setWindowTitle("Invalid configuration file")
                 msgBox.setIcon(QMessageBox.Icon.Warning)
                 msgBox.setText(str(self.configFile) +
@@ -885,6 +933,8 @@ class DS8Dialog(QDialog, Ui_DSuper8):
     def saveConfig(self):
         fileDialog = QFileDialog()
         fileDialog.setFileMode(QFileDialog.FileMode.AnyFile)
+        fileDialog.setOptions(QFileDialog.Option.DontUseNativeDialog)
+        fileDialog.setWindowIcon(self.icon)
         fileDialog.setWindowTitle("Configuration file - Save as")
         fileDialog.setDirectory(config.defaultFolder)
         filtros = ["*.conf"]
@@ -1229,6 +1279,7 @@ class DS8Dialog(QDialog, Ui_DSuper8):
     # quitButton
     def quitApp(self):
         msgBox = QMessageBox()
+        msgBox.setWindowIcon(self.icon)
         msgBox.setWindowTitle("Application exit")
         msgBox.setIcon(QMessageBox.Icon.Question)
         msgBox.setText(" " * 5 + "Exit application?" + " " * 25)
@@ -1257,10 +1308,11 @@ class DS8Dialog(QDialog, Ui_DSuper8):
     def setBlend(self, value):
         self.sendCtrl(bracketingShots + str(value))
         config.bracketing = value
-
         if value == 1:
             self.stopsBox.setEnabled(False)
+            self.oldStopsBox = self.stopsBox.value()            
             self.stopsBox.setValue(0.0)
+            self.stopsLabel.setEnabled(False)
             self.DS8tabWidget.setTabEnabled(4, False)
             self.setHDRAlgorithm(False)
             self.setToneMapAlgorithm(False)
@@ -1270,6 +1322,8 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         else:
             config.exposureTimes.resize(value, refcheck=False)
             self.stopsBox.setEnabled(True)
+            self.stopsBox.setValue(self.oldStopsBox)
+            self.stopsLabel.setEnabled(True)
             if self.stopsBox.value():
                 self.DS8tabWidget.setTabEnabled(4, True)
                 self.setHDRAlgorithm(False)
@@ -1287,6 +1341,10 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         config.prevOn = False
         config.testImg = True
         config.captureOn = False
+        
+        # File writing error is cleared.
+        self.imgthread.noOsError = True
+        
         self.disableCaptureWidgets()
         self.sendCtrl(testPhoto)
         self.updateStatus("Taken test image")
@@ -1327,10 +1385,14 @@ class DS8Dialog(QDialog, Ui_DSuper8):
     # autoExpCheckBox
     def setAutoExp(self, isOn):
         if isOn:
-            self.sendCtrl(autoexpOn)
-
+            
             # Manually set exposure time is saved for later use.
             self.manExpTime = self.timeExpBox.value()
+            
+            # Exposure time reset.
+            self.timeExpBox.setValue(0.0)            
+            
+            self.sendCtrl(autoexpOn)            
 
             # Exposure compensation.
             self.sendCtrl(expComp + str(self.EVBox.value()))
@@ -1347,18 +1409,17 @@ class DS8Dialog(QDialog, Ui_DSuper8):
             self.updateStatus("Set auto exposure")
 
         else:
-            self.sendCtrl(autoexpOff)
-            self.sendCtrl(fixExposure + str(self.manExpTime))
+            self.sendCtrl(autoexpOff)            
 
             # Auto exposure controls are disabled.
-            self.disableAEWidgets()
-
-            # We recover the manual exposure time.
-            self.timeExpBox.setValue(self.manExpTime)
+            self.disableAEWidgets()            
 
             self.timeExpLabel.setEnabled(True)
             self.timeExpBox.blockSignals(False)
             self.timeExpBox.setEnabled(True)
+
+            # We recover the manual exposure time.
+            self.timeExpBox.setValue(self.manExpTime)
 
             if self.timeExpBox.value():
                 self.exposureDownBtn.setEnabled(True)
@@ -1376,11 +1437,12 @@ class DS8Dialog(QDialog, Ui_DSuper8):
             self.updateStatus("Set manual exposure")
 
     # timeExpBox
-    def setExposure(self, texp, updStat=True):
-
+    def setExposure(self, texp, updStat=True):        
+        
         texp = round(texp, 1)
         # Manually set exposure time is saved for later use.
-        self.manExpTime = texp
+        if texp:
+            self.manExpTime = texp
 
         self.sendCtrl(fixExposure + str(texp))
 
@@ -1467,8 +1529,8 @@ class DS8Dialog(QDialog, Ui_DSuper8):
               Path(config.capFolder.strip()).is_dir()):
             self.capFolderBox.blockSignals(True)
             self.capFolderBox.setText(config.capFolder.strip())
-            self.capFolderBox.blockSignals(False)
-
+            self.capFolderBox.blockSignals(False)           
+           
             # Activate Test and Start buttons.
             self.checkCaptureOK()
 
@@ -1481,13 +1543,15 @@ class DS8Dialog(QDialog, Ui_DSuper8):
             self.capFolderBox.blockSignals(False)
             config.capFolder = ""
             self.captureTestBtn.setEnabled(False)
-            self.captureStartBtn.setEnabled(False)
-
+            self.captureStartBtn.setEnabled(False) 
+            
     # chooseFolderBtn
     def chooseFolder(self):
-        fileDialog = QFileDialog()
-        fileDialog.setOption(QFileDialog.Option.ShowDirsOnly, True)
+        fileDialog = QFileDialog()        
         fileDialog.setFileMode(QFileDialog.FileMode.Directory)
+        fileDialog.setOptions(QFileDialog.Option.DontUseNativeDialog)
+        fileDialog.setWindowIcon(self.icon)
+        fileDialog.setOption(QFileDialog.Option.ShowDirsOnly, True)
         fileDialog.setWindowTitle("Select capture folder")
         fileDialog.setDirectory(str(config.defaultFolder))
         filtros = ["Folders"]
@@ -1540,11 +1604,12 @@ class DS8Dialog(QDialog, Ui_DSuper8):
                 # Sharpness measurement reset.
                 config.numMeasSharp = 0
                 config.maxSharpness = 0
+                
+                self.disableButtons()
+                self.gotoCheckBox.setEnabled(True)
 
                 self.updateStatus("Forward to the frame " +
                                   str(self.nextFrameBox.value()))
-                self.disableButtons()
-                self.gotoCheckBox.setEnabled(True)
 
             elif numFrames < 0:
                 numFrames *= -1
@@ -1557,11 +1622,12 @@ class DS8Dialog(QDialog, Ui_DSuper8):
                 # Sharpness measurement reset.
                 config.numMeasSharp = 0
                 config.maxSharpness = 0
+               
+                self.disableButtons()
+                self.gotoCheckBox.setEnabled(True)
 
                 self.updateStatus("Backward to the frame " +
                                   str(self.nextFrameBox.value()))
-                self.disableButtons()
-                self.gotoCheckBox.setEnabled(True)
 
             elif numFrames == 0:
                 self.gotoCheckBox.setChecked(False)
@@ -1598,9 +1664,10 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         # Sharpness measurement reset.
         config.numMeasSharp = 0
         config.maxSharpness = 0
-
-        self.updateStatus("10 frame reverse")
+        
         self.disableButtons()
+
+        self.updateStatus("10 frames reverse")
 
     # captureFrmRev
     def capFrameRev(self):
@@ -1613,9 +1680,10 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         # Sharpness measurement reset.
         config.numMeasSharp = 0
         config.maxSharpness = 0
+      
+        self.disableButtons()
 
         self.updateStatus("1 frame reverse")
-        self.disableButtons()
 
     # captureFrmAdv
     def capFrameAdv(self):
@@ -1628,9 +1696,10 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         # Sharpness measurement reset.
         config.numMeasSharp = 0
         config.maxSharpness = 0
+        
+        self.disableButtons()
 
         self.updateStatus("1 frame advance")
-        self.disableButtons()
 
     # captureFrmAdv10
     def capFrameAdv10(self):
@@ -1643,9 +1712,10 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         # Sharpness measurement reset.
         config.numMeasSharp = 0
         config.maxSharpness = 0
-
-        self.updateStatus("10 frame advance")
+        
         self.disableButtons()
+
+        self.updateStatus("10 frames advance")
 
     # captureStopBtn
     def captureEnd(self):
@@ -1657,39 +1727,58 @@ class DS8Dialog(QDialog, Ui_DSuper8):
 
     # captureStartBtn
     def captureStart(self):
-        numImgFiles = len(glob(str(config.capFolder) + "/img*.jpg"))
-        if numImgFiles:
+        
+        # We check if images have been previewed.
+        # It is intended to ensure that the size of the final image has been
+        # calculated.
+        # If there are no preview images, we request a preview image.
+        if not (config.numImgRec-1):            
+            config.lastMode = "P"
+            config.prevOn = True
+            config.testImg = False
+            config.captureOn = False            
+
+            self.sendCtrl(previewOn)
+            
+            # Solicitar imagen al servidor evitando el bloqueo de imgThread.
+            self.sendCtrl(newImage)
+        
+            config.prevOn = False
+            self.sendCtrl(previewOff)
+            
+            # Preview image requested warning message.
             msgBox = QMessageBox()
-            msgBox.setWindowTitle("Existing image files")
-            msgBox.setIcon(QMessageBox.Icon.Question)
-            msgBox.setText("The selected folder contains " +
-                           str(numImgFiles) + " image files.")
-            msgBox.setInformativeText("Overwrite existing files?")
+            msgBox.setWindowIcon(self.icon)            
+            msgBox.setWindowTitle("Preview image requested")
+            msgBox.setIcon(QMessageBox.Icon.Information)
+            msgBox.setText("No preview images." + " "*40)
+            msgBox.setInformativeText("Preview image requested to complete"
+                                      " image data required by the program.")
             acceptButton = msgBox.addButton("Accept",
                                             QMessageBox.ButtonRole.AcceptRole)
-            rejectButton = msgBox.addButton("Cancel",
-                                            QMessageBox.ButtonRole.RejectRole)
-
-            msgBox.exec()
-            if msgBox.clickedButton() == rejectButton:
-                return
-        if (config.imgCapResW % 2):
-            msgBox = QMessageBox()
-            msgBox.setWindowTitle("Image dimensions error")
-            msgBox.setIcon(QMessageBox.Icon.Warning)
-            msgBox.setText("The width of the resulting image (" +
-                           str(config.imgCapResW) +
-                           " px) is not divisible by 2.")
-            msgBox.setInformativeText("Width modification required.")
-            acceptButton = msgBox.addButton("Accept",
-                                            QMessageBox.ButtonRole.AcceptRole)
-
             msgBox.exec()
             if msgBox.clickedButton() == acceptButton:
+                msgBox.close()
+        
+        if config.captureJpg:
+            # Check the width of jpg files.
+            if self.checkJpgWidth():
+                return
+
+            # Check for the existence of jpg files.
+            if not self.checkExistsJpg():
+                return            
+            
+        if config.captureRaw:
+            # Check for the existence of dng files.
+            if not self.checkExistsDng():
                 return
 
         # Motor is activated.
         self.activateMotorCheckBox.setChecked(True)
+        
+        # File writing error is cleared.
+        self.imgthread.noOsError = True
 
         # Start capture mode.
         config.lastMode = "C"
@@ -1725,12 +1814,62 @@ class DS8Dialog(QDialog, Ui_DSuper8):
     # vFlipCheckBox
     def setVFlip(self, isOn):
         self.sendCtrl(vflipOn if isOn else vflipOff)
+        
+        # Sharpness measurement reset.
+        config.numMeasSharp = 0
+        config.maxSharpness = 0
+        
         self.updateStatus("Set vertical flip")
 
     # hFlipCheckBox
     def setHFlip(self, isOn):
         self.sendCtrl(hflipOn if isOn else hflipOff)
+        
+        # Sharpness measurement reset.
+        config.numMeasSharp = 0
+        config.maxSharpness = 0
+        
         self.updateStatus("Set horizontal flip")
+
+    # jpgCheckBox
+    def setJpg(self, isOn):
+        config.captureJpg = isOn
+        self.sendCtrl(jpgOn if isOn else jpgOff)
+        if isOn:            
+            self.showHist.setEnabled(True)
+            self.showHist.setChecked(self.oldShowHist)            
+            self.bracketingBox.setEnabled(True)
+            self.bracketingBox.setValue(self.oldbracketingBox)
+            self.bracketingLabel.setEnabled(True)
+            self.DS8tabWidget.setTabEnabled(3, True)
+            self.updateStatus("jpg image capture enabled")                      
+        else:
+            
+            self.oldShowHist = self.showHist.isChecked()            
+            self.showHist.setEnabled(False)           
+            self.showHist.setChecked(False)            
+            self.bracketingBox.setEnabled(False)
+            self.oldbracketingBox = self.bracketingBox.value()
+            self.bracketingBox.setValue(1)
+            self.bracketingLabel.setEnabled(False)
+            if not config.prevOn:
+                self.DS8tabWidget.setTabEnabled(3, False)
+            self.updateStatus("jpg image capture disabled")
+
+        # Activate Test and Start buttons.
+        self.checkCaptureOK()
+            
+    # rawCheckBox
+    def setRaw(self, isOn):
+        config.captureRaw = isOn
+        self.sendCtrl(rawOn if isOn else rawOff)
+        if isOn:
+            self.updateStatus("raw-dng image capture enabled")
+        else:
+            self.updateStatus("raw-dng image capture disabled")        
+
+        # Activate Test and Start buttons.
+        self.checkCaptureOK()
 
     # bwCheckBox
     def setBW(self, isOn):
@@ -1792,7 +1931,7 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         config.numMeasSharp = 0
         config.maxSharpness = 0
 
-        self.updateStatus("Set capture resolution")
+        self.updateStatus("Set capture resolution")        
 
     # sharpnessBox
     def setSharpness(self, value):
@@ -1852,7 +1991,7 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         if isOn:
             self.updateStatus("Round angles")
         else:
-            self.updateStatus("Don't round angles")
+            self.updateStatus("Do not round angles")
 
     # rotationCheckBox
     def setRotation(self, isOn):
@@ -1901,14 +2040,22 @@ class DS8Dialog(QDialog, Ui_DSuper8):
             self.updateStatus("Do not crop image")
 
         if isOn and config.prevOn:
+            self.cropTopLabel.setEnabled(True)
             self.cropTopBox.setEnabled(True)
+            self.cropLeftLabel.setEnabled(True)
             self.cropLeftBox.setEnabled(True)
+            self.cropRightLabel.setEnabled(True)
             self.cropRightBox.setEnabled(True)
             self.cropBottomBox.setEnabled(True)
+            self.cropBottomBox.setEnabled(True)
         else:
+            self.cropTopLabel.setEnabled(False)
             self.cropTopBox.setEnabled(False)
+            self.cropLeftLabel.setEnabled(False)
             self.cropLeftBox.setEnabled(False)
+            self.cropRightLabel.setEnabled(False)
             self.cropRightBox.setEnabled(False)
+            self.cropBottomBox.setEnabled(False)
             self.cropBottomBox.setEnabled(False)
 
         # Sharpness measurement reset.
@@ -2031,7 +2178,7 @@ class DS8Dialog(QDialog, Ui_DSuper8):
     # MantiukRadioButton
     def setToneMapAlgorithm(self, updStat=True):
         if (self.SimpleRadioButton.isEnabled()
-                and self.SimpleRadioButton.isChecked()):
+            and self.SimpleRadioButton.isChecked()):
             config.toneMap = "Simple"
             self.SimpleGammaLabel.setEnabled(True)
             self.SimpleGammaSpinBox.setEnabled(True)
@@ -2058,8 +2205,8 @@ class DS8Dialog(QDialog, Ui_DSuper8):
             if updStat:
                 self.updateStatus("Established simple tone mapping algorithm")
 
-        elif (self.ReinhardRadioButton.isEnabled() and
-              self.ReinhardRadioButton.isChecked()):
+        elif (self.ReinhardRadioButton.isEnabled()
+              and self.ReinhardRadioButton.isChecked()):
             config.toneMap = "Reinhard"
             self.SimpleGammaLabel.setEnabled(False)
             self.SimpleGammaSpinBox.setEnabled(False)
@@ -2086,8 +2233,8 @@ class DS8Dialog(QDialog, Ui_DSuper8):
             if updStat:
                 self.updateStatus("Established Reinhard tone mapping algorithm")
 
-        elif (self.DragoRadioButton.isEnabled() and
-              self.DragoRadioButton.isChecked()):
+        elif (self.DragoRadioButton.isEnabled()
+              and self.DragoRadioButton.isChecked()):
             config.toneMap = "Drago"
             self.SimpleGammaLabel.setEnabled(False)
             self.SimpleGammaSpinBox.setEnabled(False)
@@ -2216,8 +2363,10 @@ class DS8Dialog(QDialog, Ui_DSuper8):
     # - Inactive preview.
     # - Film placed in position.
     # - Capture folder determined.
-    # - Configured a single photo per frame or
-    # - Configured more than one photo per frame and more than 0 stop points.
+    # - Capture jpg or capture raw. 
+    # - If capture jpg configured a single photo per frame or
+    #   configured more than one photo per frame and more than 0
+    #   stop points.
     def checkCaptureOK(self):
         if (config.motorNotMoving and
             (not config.prevOn) and
@@ -2225,7 +2374,8 @@ class DS8Dialog(QDialog, Ui_DSuper8):
             config.capFolder.strip() and
             Path(config.capFolder.strip()).is_dir() and
             (self.bracketingBox.value() == 1 or
-                 (self.bracketingBox.value() > 1 and self.stopsBox.value()))):
+            (self.bracketingBox.value() > 1 and self.stopsBox.value())) and
+            (config.captureJpg or config.captureRaw)):
 
             self.captureTestBtn.setEnabled(True)
             self.captureStartBtn.setEnabled(True)
@@ -2234,6 +2384,77 @@ class DS8Dialog(QDialog, Ui_DSuper8):
             self.captureTestBtn.setEnabled(False)
             self.captureStartBtn.setEnabled(False)
 
+    # This function is to determine if there are jpg files in the capture
+    # folder.
+    def checkExistsJpg(self):
+        numJpgFiles = len(glob(str(config.capFolder) + "/img*.jpg"))
+        if numJpgFiles:
+            msgBox = QMessageBox()
+            msgBox.setWindowIcon(self.icon)
+            msgBox.setWindowTitle("Existing jpg image files")
+            msgBox.setIcon(QMessageBox.Icon.Question)
+            msgBox.setText("The selected folder contains " +
+                           str(numJpgFiles) + " jpg image files.")
+            msgBox.setInformativeText("Overwrite existing jpg files?")
+            acceptButton = msgBox.addButton("Accept",
+                                            QMessageBox.ButtonRole.AcceptRole)
+            rejectButton = msgBox.addButton("Cancel",
+                                            QMessageBox.ButtonRole.RejectRole)
+
+            msgBox.exec()
+            if msgBox.clickedButton() == rejectButton:
+                return False
+            else:
+                return True
+        else:
+            return True
+    
+    # This function is to determine if there are dng files in the capture
+    # folder.
+    def checkExistsDng(self):
+        numDngFiles = len(glob(str(config.capFolder) + "/img*.dng"))
+        if numDngFiles:
+            msgBox = QMessageBox()
+            msgBox.setWindowIcon(self.icon)            
+            msgBox.setWindowTitle("Existing dng image files")
+            msgBox.setIcon(QMessageBox.Icon.Question)
+            msgBox.setText("The selected folder contains " +
+                           str(numDngFiles) + " dng image files.")
+            msgBox.setInformativeText("Overwrite existing dng files?")
+            acceptButton = msgBox.addButton("Accept",
+                                            QMessageBox.ButtonRole.AcceptRole)
+            rejectButton = msgBox.addButton("Cancel",
+                                            QMessageBox.ButtonRole.RejectRole)
+
+            msgBox.exec()
+            if msgBox.clickedButton() == rejectButton:
+                return False
+            elif msgBox.clickedButton() == acceptButton:
+                return True
+        else:
+            return True
+            
+    # This function is used to check that the width in pixels of jpg images is
+    # divisible by 2.
+    def checkJpgWidth(self):
+        if (config.imgCapResW % 2):            
+            msgBox = QMessageBox()
+            msgBox.setWindowIcon(self.icon)
+            msgBox.setWindowTitle("Image dimensions error")
+            msgBox.setIcon(QMessageBox.Icon.Warning)
+            msgBox.setText("The width of the resulting image (" +
+                           str(config.imgCapResW) +
+                           " px) is not divisible by 2.")
+            msgBox.setInformativeText("Width modification required.")
+            acceptButton = msgBox.addButton("Accept",
+                                            QMessageBox.ButtonRole.AcceptRole)
+
+            msgBox.exec()
+            if msgBox.clickedButton() == acceptButton:
+                return True
+        else:
+            return False
+        
     def disableButtons(self):
         self.fRevButton.setEnabled(False)
         self.reverseButton.setEnabled(False)
@@ -2275,6 +2496,7 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         self.analogueGainLabel.setEnabled(True)
         self.analogueGainBox.blockSignals(False)
         self.analogueGainBox.setEnabled(True)
+        self.analogueGainBox.setValue(1.0)
         self.EVLabel.setEnabled(False)
         self.EVBox.setEnabled(False)
         if config.prevOn:
@@ -2404,9 +2626,10 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         self.loadConfigButton.setEnabled(False)
         self.capFolderBox.setEnabled(False)
         self.chooseFolderBtn.setEnabled(False)
-
-        # Disable post-capture settings.
-        self.roundCorns.setEnabled(False)
+        
+        # Disable capture mode controls.
+        self.jpgCheckBox.setEnabled(False)
+        self.rawCheckBox.setEnabled(False)        
 
         # Disable HDR settings.
         self.PHighLabel.setEnabled(False)
@@ -2514,7 +2737,7 @@ class DS8Dialog(QDialog, Ui_DSuper8):
             if not self.autoExpCheckBox.isChecked():
                 self.timeExpLabel.setEnabled(True)
                 self.timeExpBox.setEnabled(True)
-                self.timeExpBox.blockSignals(False)
+                self.timeExpBox.blockSignals(False)                
                 self.timeExpBox.setValue(self.manExpTime)
                 if self.timeExpBox.value():
                     self.exposureDownBtn.setEnabled(True)
@@ -2565,6 +2788,10 @@ class DS8Dialog(QDialog, Ui_DSuper8):
             self.loadConfigButton.setEnabled(True)
             self.capFolderBox.setEnabled(True)
             self.chooseFolderBtn.setEnabled(True)
+            
+            # Enable capture mode controls.
+            self.jpgCheckBox.setEnabled(True)
+            self.rawCheckBox.setEnabled(True)            
 
             # Enable HDR settings.
             if self.bracketingBox.value() > 1:
@@ -2628,7 +2855,7 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         self.cropBottomBox.setMaximum(maxCropH)
 
     def showImgSizes(self):
-        self.sizeImgCapLabel.setText("Capturada: " + str(config.imgCapIniW) +
+        self.sizeImgCapLabel.setText("Captured: " + str(config.imgCapIniW) +
                                      "x" + str(config.imgCapIniH))
         self.sizeImgFinalLabel.setText("Final: " + str(config.imgCapResW) +
                                        "x" + str(config.imgCapResH))
@@ -2750,9 +2977,66 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         if config.showHist and self.histograma:
             self.histograma.plotHistogram(cvimg, title)
             self.plotHistogramEvent.set()
+            
+    def imgFileWrtExcp(self, error, fileName):                
+        
+        # Pop-up message If there are errors writing the image file.
+        msgBox = QMessageBox()
+        msgBox.setWindowIcon(self.icon)            
+        msgBox.setWindowTitle("Error writing image file")
+        msgBox.setIcon(QMessageBox.Icon.Warning)
+        if not config.testImg:
+            if fileName[-7] == "-":
+                errorMsg = ("Error writing bracketed image file: " + error +"\n\n" +
+                            fileName + " not saved" + "\n\n" + "Capture stopped" + "\n\n"
+                            "The movie will then be rewinded to the first unsaved frame")
+                statusMsg = ("Error writing bracketed image file")
+                
+            else:
+                errorMsg = ("Error writing image file: " + error +"\n\n" +
+                            fileName + " not saved" + "\n\n" + "Capture stopped" + "\n\n"
+                            "The movie will then be rewinded to the first unsaved frame")
+                statusMsg = ("Error writing image file")
+                
+        else:            
+            if fileName[-7] == "-":
+                errorMsg = ("Error writing bracketed test image file: " + error +"\n\n" +
+                            fileName + " not saved")
+                statusMsg = ("Error writing bracketed test image file")
+                
+            else:
+                errorMsg = ("Error writing test image file: " + error +"\n\n" +
+                            fileName + " not saved")
+                statusMsg = ("Error writing test image file")
+        
+        msgBox.setText(errorMsg)        
+        acceptButton = msgBox.addButton("Accept",
+                                        QMessageBox.ButtonRole.AcceptRole)
+        self.updateStatus(statusMsg)
+        msgBox.exec()
+        if msgBox.clickedButton() == acceptButton:
+            msgBox.close()
+        
+        if not config.testImg:
+        # The image number that caused the error is determined.
+            if fileName[-7] == "-":
+                # Number of bracketed image files.
+                numImg = int(fileName[-12:-7])
+            else:
+                # Number of jpg and dng image files.
+                numImg = int(fileName[-9:-4])         
+        
+            # Backspace to unsaved frame.        
+            oldNextFrameBoxValue = self.nextFrameBox.value()
+            self.nextFrameBox.setValue(numImg)
+            self.gotoCheckBox.click()        
+            self.nextFrameBox.setValue(oldNextFrameBoxValue)
+            self.gotoCheckBox.setChecked(False)
+        
+        else:            
+            config.testImg = False
 
     # This function is to activate the default GUI settings.
-
     def setDefaultConfiguration(self):
 
         # Setup.
@@ -2789,6 +3073,8 @@ class DS8Dialog(QDialog, Ui_DSuper8):
         self.vFlipCheckBox.setChecked(True)
         self.hFlipCheckBox.setChecked(False)
         self.bwCheckBox.setChecked(False)
+        self.jpgCheckBox.setChecked(True)
+        self.rawCheckBox.setChecked(False)
         self.constraintModeBox.setCurrentIndex(0)
         self.exposureModeBox.setCurrentIndex(0)
         self.meteringModeBox.setCurrentIndex(0)

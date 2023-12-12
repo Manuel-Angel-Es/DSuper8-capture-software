@@ -218,6 +218,9 @@ increased.</string>
              <layout class="QHBoxLayout" name="horizontalLayout">
               <item>
                <widget class="QLabel" name="label_6">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -256,6 +259,9 @@ increased.</string>
               </item>
               <item>
                <widget class="QLabel" name="label_7">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -836,7 +842,7 @@ the motion of the film.</string>
                  <locale language="English" country="UnitedStates"/>
                 </property>
                 <property name="text">
-                 <string notr="true">&lt;-</string>
+                 <string notr="true">&lt;</string>
                 </property>
                </widget>
               </item>
@@ -937,7 +943,7 @@ the motion of the film.</string>
                  <locale language="English" country="UnitedStates"/>
                 </property>
                 <property name="text">
-                 <string notr="true">-&gt;</string>
+                 <string notr="true">&gt;</string>
                 </property>
                </widget>
               </item>
@@ -1135,6 +1141,9 @@ loaded in the user interface.</string>
                <string notr="true"/>
               </property>
               <property name="accessibleDescription">
+               <string notr="true"/>
+              </property>
+              <property name="styleSheet">
                <string notr="true"/>
               </property>
               <property name="text">
@@ -2704,7 +2713,7 @@ Framerate parameter in frames per second.</string>
             </widget>
            </item>
            <item>
-            <widget class="QGroupBox" name="gainLabelD">
+            <widget class="QGroupBox" name="gainsGroupBox">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -2723,6 +2732,9 @@ Framerate parameter in frames per second.</string>
                <height>55</height>
               </size>
              </property>
+             <property name="toolTip">
+              <string notr="true"/>
+             </property>
              <property name="title">
               <string notr="true">Gains</string>
              </property>
@@ -2730,6 +2742,9 @@ Framerate parameter in frames per second.</string>
               <set>Qt::AlignHCenter|Qt::AlignTop</set>
              </property>
              <layout class="QHBoxLayout" name="horizontalLayout_7">
+              <property name="bottomMargin">
+               <number>9</number>
+              </property>
               <item>
                <widget class="QLabel" name="gainLabelA">
                 <property name="sizePolicy">
@@ -2740,19 +2755,19 @@ Framerate parameter in frames per second.</string>
                 </property>
                 <property name="minimumSize">
                  <size>
-                  <width>10</width>
+                  <width>12</width>
                   <height>25</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>10</width>
+                  <width>12</width>
                   <height>25</height>
                  </size>
                 </property>
                 <property name="toolTip">
-                 <string>Ganacia analógica informada por la cámara.
-Valores entre 1 y 16.</string>
+                 <string notr="true">Analog gain reported by the camera.
+Values between 1 and 16.</string>
                 </property>
                 <property name="text">
                  <string notr="true">A</string>
@@ -2817,7 +2832,7 @@ Values between 1 and 16.</string>
                </spacer>
               </item>
               <item>
-               <widget class="QLabel" name="gainLabelD_2">
+               <widget class="QLabel" name="gainLabelD">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -2826,20 +2841,19 @@ Values between 1 and 16.</string>
                 </property>
                 <property name="minimumSize">
                  <size>
-                  <width>10</width>
+                  <width>12</width>
                   <height>25</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>10</width>
+                  <width>12</width>
                   <height>25</height>
                  </size>
                 </property>
                 <property name="toolTip">
-                 <string>Ganacia digital informada por la cámara.
-Si no está cerca de 1, la iluminación es
-muy baja.</string>
+                 <string notr="true">Digital gain reported by camera.
+If it is not close to 1, the lighting is too low.</string>
                 </property>
                 <property name="text">
                  <string notr="true">D</string>
@@ -3382,7 +3396,7 @@ the film or position indicator.</string>
                  <string notr="true"/>
                 </property>
                 <property name="text">
-                 <string notr="true">&lt;-10</string>
+                 <string notr="true">&lt; 10</string>
                 </property>
                </widget>
               </item>
@@ -3431,7 +3445,7 @@ the film or position indicator.</string>
                  <string notr="true"/>
                 </property>
                 <property name="text">
-                 <string notr="true">&lt;- 1</string>
+                 <string notr="true">&lt; 1</string>
                 </property>
                </widget>
               </item>
@@ -3480,7 +3494,7 @@ the film or position indicator.</string>
                  <string notr="true"/>
                 </property>
                 <property name="text">
-                 <string notr="true">1 -&gt;</string>
+                 <string notr="true">1 &gt;</string>
                 </property>
                </widget>
               </item>
@@ -3529,7 +3543,7 @@ the film or position indicator.</string>
                  <string notr="true"/>
                 </property>
                 <property name="text">
-                 <string notr="true">10-&gt;</string>
+                 <string notr="true">10 &gt;</string>
                 </property>
                </widget>
               </item>
@@ -3743,6 +3757,7 @@ the film or position indicator.</string>
        <string notr="true">Advanced settings:
 - Image flip.
 - B/W image.
+- Capture format (jpg - dng).
 - Auto exposure restriction.
 - Auto exposure mode.
 - Metering mode.
@@ -3805,7 +3820,7 @@ the film or position indicator.</string>
            </property>
            <property name="sizeHint" stdset="0">
             <size>
-             <width>10</width>
+             <width>40</width>
              <height>20</height>
             </size>
            </property>
@@ -3864,7 +3879,7 @@ the film or position indicator.</string>
            </property>
            <property name="sizeHint" stdset="0">
             <size>
-             <width>10</width>
+             <width>40</width>
              <height>20</height>
             </size>
            </property>
@@ -3913,6 +3928,85 @@ the film or position indicator.</string>
            </property>
            <property name="text">
             <string notr="true">B/W</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_23">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="jpgCheckBox">
+           <property name="minimumSize">
+            <size>
+             <width>50</width>
+             <height>30</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>50</width>
+             <height>30</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string notr="true">Activate jpg format in the output file.</string>
+           </property>
+           <property name="layoutDirection">
+            <enum>Qt::RightToLeft</enum>
+           </property>
+           <property name="text">
+            <string notr="true">jpg</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_17">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="rawCheckBox">
+           <property name="minimumSize">
+            <size>
+             <width>50</width>
+             <height>30</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>50</width>
+             <height>30</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string notr="true">Activate raw-dng format in the output file.</string>
+           </property>
+           <property name="layoutDirection">
+            <enum>Qt::RightToLeft</enum>
+           </property>
+           <property name="text">
+            <string>raw</string>
            </property>
           </widget>
          </item>
@@ -5412,8 +5506,8 @@ be removed from the image.</string>
                    </size>
                   </property>
                   <property name="toolTip">
-                   <string notr="true">Anchura en píxels de la franja derecha
-a eliminar de la imagen.</string>
+                   <string notr="true">Width in pixels of the right strip to
+be removed from the image.</string>
                   </property>
                   <property name="statusTip">
                    <string notr="true"/>
@@ -5456,8 +5550,8 @@ a eliminar de la imagen.</string>
                    </size>
                   </property>
                   <property name="toolTip">
-                   <string notr="true">Anchura en píxels de la franja derecha
-a eliminar de la imagen.</string>
+                   <string notr="true">Width in pixels of the right strip to
+be removed from the image.</string>
                   </property>
                   <property name="statusTip">
                    <string notr="true"/>
@@ -6571,13 +6665,13 @@ of the image.</string>
                   </property>
                   <property name="minimumSize">
                    <size>
-                    <width>65</width>
+                    <width>54</width>
                     <height>25</height>
                    </size>
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>65</width>
+                    <width>54</width>
                     <height>25</height>
                    </size>
                   </property>
@@ -6803,13 +6897,13 @@ combination of the two.</string>
                   </property>
                   <property name="minimumSize">
                    <size>
-                    <width>65</width>
+                    <width>54</width>
                     <height>25</height>
                    </size>
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>65</width>
+                    <width>54</width>
                     <height>25</height>
                    </size>
                   </property>
@@ -8177,6 +8271,9 @@ the blue and red gain controls.</string>
            <string notr="true"/>
           </property>
           <property name="accessibleDescription">
+           <string notr="true"/>
+          </property>
+          <property name="styleSheet">
            <string notr="true"/>
           </property>
           <property name="editable">
@@ -9590,8 +9687,8 @@ saturation to 1.00.</string>
    <slot>capFrameRev()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>280</x>
-     <y>354</y>
+     <x>281</x>
+     <y>355</y>
     </hint>
     <hint type="destinationlabel">
      <x>323</x>
@@ -9606,8 +9703,8 @@ saturation to 1.00.</string>
    <slot>captureStart()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>316</x>
-     <y>392</y>
+     <x>318</x>
+     <y>393</y>
     </hint>
     <hint type="destinationlabel">
      <x>44</x>
@@ -9622,8 +9719,8 @@ saturation to 1.00.</string>
    <slot>setVFlip(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>90</x>
-     <y>87</y>
+     <x>70</x>
+     <y>89</y>
     </hint>
     <hint type="destinationlabel">
      <x>307</x>
@@ -9638,8 +9735,8 @@ saturation to 1.00.</string>
    <slot>setHFlip(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>245</x>
-     <y>87</y>
+     <x>149</x>
+     <y>89</y>
     </hint>
     <hint type="destinationlabel">
      <x>307</x>
@@ -9655,7 +9752,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>253</x>
-     <y>392</y>
+     <y>393</y>
     </hint>
     <hint type="destinationlabel">
      <x>201</x>
@@ -9671,7 +9768,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>380</x>
-     <y>193</y>
+     <y>196</y>
     </hint>
     <hint type="destinationlabel">
      <x>243</x>
@@ -9686,8 +9783,8 @@ saturation to 1.00.</string>
    <slot>setEndFrame(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>207</x>
-     <y>76</y>
+     <x>196</x>
+     <y>80</y>
     </hint>
     <hint type="destinationlabel">
      <x>243</x>
@@ -9702,8 +9799,8 @@ saturation to 1.00.</string>
    <slot>setDisabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>380</x>
-     <y>87</y>
+     <x>226</x>
+     <y>89</y>
     </hint>
     <hint type="destinationlabel">
      <x>242</x>
@@ -9718,8 +9815,8 @@ saturation to 1.00.</string>
    <slot>setDisabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>380</x>
-     <y>87</y>
+     <x>226</x>
+     <y>89</y>
     </hint>
     <hint type="destinationlabel">
      <x>242</x>
@@ -9734,8 +9831,8 @@ saturation to 1.00.</string>
    <slot>setBlendStops(double)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>274</x>
-     <y>114</y>
+     <x>272</x>
+     <y>118</y>
     </hint>
     <hint type="destinationlabel">
      <x>243</x>
@@ -9750,8 +9847,8 @@ saturation to 1.00.</string>
    <slot>setBW(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>380</x>
-     <y>87</y>
+     <x>226</x>
+     <y>89</y>
     </hint>
     <hint type="destinationlabel">
      <x>307</x>
@@ -9766,8 +9863,8 @@ saturation to 1.00.</string>
    <slot>takeTestPhoto()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>84</x>
-     <y>114</y>
+     <x>82</x>
+     <y>118</y>
     </hint>
     <hint type="destinationlabel">
      <x>307</x>
@@ -9783,7 +9880,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>364</x>
-     <y>154</y>
+     <y>158</y>
     </hint>
     <hint type="destinationlabel">
      <x>307</x>
@@ -9799,7 +9896,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>318</x>
-     <y>154</y>
+     <y>158</y>
     </hint>
     <hint type="destinationlabel">
      <x>208</x>
@@ -9814,8 +9911,8 @@ saturation to 1.00.</string>
    <slot>setBlend(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>274</x>
-     <y>76</y>
+     <x>272</x>
+     <y>80</y>
     </hint>
     <hint type="destinationlabel">
      <x>163</x>
@@ -9830,8 +9927,8 @@ saturation to 1.00.</string>
    <slot>capFrameAdv()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>327</x>
-     <y>354</y>
+     <x>329</x>
+     <y>355</y>
     </hint>
     <hint type="destinationlabel">
      <x>323</x>
@@ -9847,7 +9944,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>232</x>
-     <y>354</y>
+     <y>355</y>
     </hint>
     <hint type="destinationlabel">
      <x>323</x>
@@ -9862,8 +9959,8 @@ saturation to 1.00.</string>
    <slot>capFrameAdv10()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>375</x>
-     <y>354</y>
+     <x>378</x>
+     <y>355</y>
     </hint>
     <hint type="destinationlabel">
      <x>323</x>
@@ -10007,7 +10104,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>114</x>
-     <y>154</y>
+     <y>158</y>
     </hint>
     <hint type="destinationlabel">
      <x>7</x>
@@ -10023,7 +10120,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>272</x>
-     <y>154</y>
+     <y>158</y>
     </hint>
     <hint type="destinationlabel">
      <x>5</x>
@@ -10038,8 +10135,8 @@ saturation to 1.00.</string>
    <slot>capturePause()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>380</x>
-     <y>392</y>
+     <x>383</x>
+     <y>393</y>
     </hint>
     <hint type="destinationlabel">
      <x>4</x>
@@ -10076,22 +10173,6 @@ saturation to 1.00.</string>
     <hint type="destinationlabel">
      <x>6</x>
      <y>244</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>prevCheckBox</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>DSuper8</receiver>
-   <slot>previewSet(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>368</x>
-     <y>147</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>3</x>
-     <y>194</y>
     </hint>
    </hints>
   </connection>
@@ -10167,7 +10248,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>233</x>
-     <y>316</y>
+     <y>317</y>
     </hint>
     <hint type="destinationlabel">
      <x>111</x>
@@ -10198,8 +10279,8 @@ saturation to 1.00.</string>
    <slot>activateMotor(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>370</x>
-     <y>255</y>
+     <x>374</x>
+     <y>259</y>
     </hint>
     <hint type="destinationlabel">
      <x>326</x>
@@ -10214,8 +10295,8 @@ saturation to 1.00.</string>
    <slot>positionIndicatorUp()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>339</x>
-     <y>280</y>
+     <x>340</x>
+     <y>283</y>
     </hint>
     <hint type="destinationlabel">
      <x>347</x>
@@ -10230,8 +10311,8 @@ saturation to 1.00.</string>
    <slot>positionIndicatorDown()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>367</x>
-     <y>280</y>
+     <x>369</x>
+     <y>283</y>
     </hint>
     <hint type="destinationlabel">
      <x>180</x>
@@ -10246,8 +10327,8 @@ saturation to 1.00.</string>
    <slot>setHDRAlgorithm()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>286</x>
-     <y>113</y>
+     <x>280</x>
+     <y>117</y>
     </hint>
     <hint type="destinationlabel">
      <x>4</x>
@@ -10262,8 +10343,8 @@ saturation to 1.00.</string>
    <slot>setHDRAlgorithm()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>307</x>
-     <y>104</y>
+     <x>371</x>
+     <y>117</y>
     </hint>
     <hint type="destinationlabel">
      <x>3</x>
@@ -10278,8 +10359,8 @@ saturation to 1.00.</string>
    <slot>setToneMapAlgorithm()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>121</x>
-     <y>176</y>
+     <x>122</x>
+     <y>200</y>
     </hint>
     <hint type="destinationlabel">
      <x>3</x>
@@ -10294,8 +10375,8 @@ saturation to 1.00.</string>
    <slot>setToneMapAlgorithm()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>121</x>
-     <y>232</y>
+     <x>122</x>
+     <y>255</y>
     </hint>
     <hint type="destinationlabel">
      <x>8</x>
@@ -10310,8 +10391,8 @@ saturation to 1.00.</string>
    <slot>setToneMapAlgorithm()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>121</x>
-     <y>302</y>
+     <x>122</x>
+     <y>324</y>
     </hint>
     <hint type="destinationlabel">
      <x>7</x>
@@ -10326,8 +10407,8 @@ saturation to 1.00.</string>
    <slot>setToneMapAlgorithm()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>121</x>
-     <y>373</y>
+     <x>122</x>
+     <y>393</y>
     </hint>
     <hint type="destinationlabel">
      <x>3</x>
@@ -10343,7 +10424,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>241</x>
-     <y>178</y>
+     <y>202</y>
     </hint>
     <hint type="destinationlabel">
      <x>400</x>
@@ -10359,7 +10440,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>242</x>
-     <y>222</y>
+     <y>246</y>
     </hint>
     <hint type="destinationlabel">
      <x>401</x>
@@ -10375,7 +10456,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>368</x>
-     <y>240</y>
+     <y>246</y>
     </hint>
     <hint type="destinationlabel">
      <x>400</x>
@@ -10391,7 +10472,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>242</x>
-     <y>251</y>
+     <y>274</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10407,7 +10488,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>368</x>
-     <y>268</y>
+     <y>274</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10423,7 +10504,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>242</x>
-     <y>292</y>
+     <y>314</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10439,7 +10520,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>368</x>
-     <y>309</y>
+     <y>314</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10455,7 +10536,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>242</x>
-     <y>321</y>
+     <y>342</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10471,7 +10552,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>242</x>
-     <y>362</y>
+     <y>383</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10487,7 +10568,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>368</x>
-     <y>379</y>
+     <y>383</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10503,7 +10584,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>242</x>
-     <y>391</y>
+     <y>411</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10518,8 +10599,8 @@ saturation to 1.00.</string>
    <slot>initHistogram(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>167</x>
-     <y>105</y>
+     <x>152</x>
+     <y>111</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10535,7 +10616,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>370</x>
-     <y>105</y>
+     <y>111</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10551,7 +10632,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>370</x>
-     <y>149</y>
+     <y>155</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10566,8 +10647,8 @@ saturation to 1.00.</string>
    <slot>setRotation(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>91</x>
-     <y>191</y>
+     <x>92</x>
+     <y>199</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10582,8 +10663,8 @@ saturation to 1.00.</string>
    <slot>setRotationValue(double)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>172</x>
-     <y>191</y>
+     <x>173</x>
+     <y>199</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10598,8 +10679,8 @@ saturation to 1.00.</string>
    <slot>setCrop(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>138</x>
-     <y>236</y>
+     <x>139</x>
+     <y>244</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10614,8 +10695,8 @@ saturation to 1.00.</string>
    <slot>setCropT(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>261</x>
-     <y>237</y>
+     <x>276</x>
+     <y>245</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10630,8 +10711,8 @@ saturation to 1.00.</string>
    <slot>setCropL(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>150</x>
-     <y>271</y>
+     <x>151</x>
+     <y>277</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10646,8 +10727,8 @@ saturation to 1.00.</string>
    <slot>setCropR(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>371</x>
-     <y>272</y>
+     <x>373</x>
+     <y>277</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10662,8 +10743,8 @@ saturation to 1.00.</string>
    <slot>setCropB(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>261</x>
-     <y>304</y>
+     <x>276</x>
+     <y>309</y>
     </hint>
     <hint type="destinationlabel">
      <x>199</x>
@@ -10679,7 +10760,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>304</x>
-     <y>316</y>
+     <y>317</y>
     </hint>
     <hint type="destinationlabel">
      <x>406</x>
@@ -10758,8 +10839,8 @@ saturation to 1.00.</string>
    <slot>checkCaptureFolder(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>52</x>
-     <y>168</y>
+     <x>64</x>
+     <y>196</y>
     </hint>
     <hint type="destinationlabel">
      <x>4</x>
@@ -10775,7 +10856,7 @@ saturation to 1.00.</string>
    <hints>
     <hint type="sourcelabel">
      <x>202</x>
-     <y>104</y>
+     <y>118</y>
     </hint>
     <hint type="destinationlabel">
      <x>5</x>
@@ -10790,8 +10871,8 @@ saturation to 1.00.</string>
    <slot>setPercentHigh(double)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>146</x>
-     <y>92</y>
+     <x>188</x>
+     <y>107</y>
     </hint>
     <hint type="destinationlabel">
      <x>3</x>
@@ -10806,8 +10887,8 @@ saturation to 1.00.</string>
    <slot>setPercentLow(double)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>167</x>
-     <y>110</y>
+     <x>188</x>
+     <y>132</y>
     </hint>
     <hint type="destinationlabel">
      <x>189</x>
@@ -10822,8 +10903,8 @@ saturation to 1.00.</string>
    <slot>showSharpness(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>52</x>
-     <y>138</y>
+     <x>76</x>
+     <y>155</y>
     </hint>
     <hint type="destinationlabel">
      <x>4</x>
@@ -10854,8 +10935,8 @@ saturation to 1.00.</string>
    <slot>setAnalogueGain(double)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>178</x>
-     <y>480</y>
+     <x>177</x>
+     <y>496</y>
     </hint>
     <hint type="destinationlabel">
      <x>4</x>
@@ -11126,8 +11207,8 @@ saturation to 1.00.</string>
    <slot>setDisabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>355</x>
-     <y>72</y>
+     <x>226</x>
+     <y>89</y>
     </hint>
     <hint type="destinationlabel">
      <x>280</x>
@@ -11142,12 +11223,60 @@ saturation to 1.00.</string>
    <slot>setDisabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>355</x>
-     <y>72</y>
+     <x>226</x>
+     <y>89</y>
     </hint>
     <hint type="destinationlabel">
      <x>280</x>
      <y>617</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>jpgCheckBox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>DSuper8</receiver>
+   <slot>setJpg()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>260</x>
+     <y>76</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>397</x>
+     <y>28</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>rawCheckBox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>DSuper8</receiver>
+   <slot>setRaw()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>336</x>
+     <y>74</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>395</x>
+     <y>68</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>prevCheckBox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>DSuper8</receiver>
+   <slot>previewSet(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>316</x>
+     <y>141</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>199</x>
+     <y>404</y>
     </hint>
    </hints>
   </connection>
@@ -11270,5 +11399,7 @@ saturation to 1.00.</string>
   <slot>setExposureMode(int)</slot>
   <slot>setMeteringMode(int)</slot>
   <slot>setSharpness(double)</slot>
+  <slot>setJpg()</slot>
+  <slot>setRaw()</slot>
  </slots>
 </ui>

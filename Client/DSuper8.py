@@ -9,7 +9,7 @@ User interface redesigned by Manuel Ángel.
 
 DSuper8.py: Main client software program.
 
-Last version: 20230430.
+Last version: 20231130.
 """
 
 from socket import socket, AF_INET, SOCK_STREAM
@@ -26,7 +26,6 @@ from PyQt6.QtWidgets import QApplication, QStyleFactory
 
 from PyQt6.QtCore import QCoreApplication, QDir
 
-
 # Our own modules.
 
 # The global variables of the modules are defined here.
@@ -40,7 +39,6 @@ from DS8ImgThread import imgThread
 
 # Creation of 2 connections: one for sending control sequences and another for
 # receiving image data.
-
 
 def setupConns(image_socket, control_socket):
     try:
@@ -65,10 +63,14 @@ if __name__ == "__main__":
     basicConfig(stream=stdout, level=INFO, format="%(asctime)s - %(levelname)s " +
                 "- %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 
-    info("DSuper8 client software ver. 20230430")
+    info("DSuper8 client software ver. 20231130")
 
     app = QApplication(argv)
     app.setStyle(QStyleFactory.create("Fusion"))
+    
+    if config.GUITheme == "Dark":
+        import DS8Themes
+        app.setStyleSheet(DS8Themes.darkTheme)
 
     # Path to the resources folder is configured.
     config.resourcesPath = QDir.currentPath() + "/Resources/"
@@ -143,7 +145,7 @@ if __name__ == "__main__":
     # Show windows.
     winUI.show()
     winImg.show()
-    info("Windows displayed")    
+    info("Windows displayed")
 
     winUI.updateStatus("Program started")
 

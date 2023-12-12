@@ -7,13 +7,14 @@ User interface redesigned by Manuel Ángel.
 
 codes.py: Codes used for client-server communication.
 
-Latest version: 20230430.
+Latest version: 20231130.
 """
 
 # Initial settings
 
 # zoomDial
-setZ = "6"
+imageWidth = "1"
+imageHeight = "2"
 
 # roiUpButton - roiDownButton
 setY = "7"
@@ -115,30 +116,38 @@ stopCapture = "O"
 startCapture = "o"
 newImage = "n"
 
-# activar señal de parada del motor
+# Activate engine stop signal
 sendStop = "q"
 
 # Advanced settings
 
-# vflip
+# vFlipCheckBox
 vflipOn = "v"
 vflipOff = "V"
 
-# hflip
+# hFlipCheckBox
 hflipOn = "h"
 hflipOff = "H"
 
+# jpgCheckBox
+jpgOn = "j"
+jpgOff = "J"
+
+# rawCheckBox
+rawOn = "d"
+rawOff = "D"
+
 # constraintModeBox
-constraintMode = "d"
+constraintMode = "T"
 
 # exposureModeBox
 exposureMode = "E"
 
 # meteringModeBox
-meteringMode = "m"
+meteringMode = "M"
 
 # resolutionBox
-setSize = "*"
+setSize = "Z"
 
 # sharpnessBox
-setSharp = "j"
+setSharp = "S"
